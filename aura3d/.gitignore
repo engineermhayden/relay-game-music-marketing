@@ -1,0 +1,12 @@
+.github
+.env
+.env.files/
+.reference/
+node_modules/
+dist/
+__pycache__/
+.venv/
+*.pyc
+test-results/
+playwright-report/
+artifacts/

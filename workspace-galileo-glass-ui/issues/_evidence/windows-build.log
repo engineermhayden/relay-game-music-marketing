@@ -1,0 +1,12 @@
+
+> @veerone/galileo-glass-ui@1.0.28 build
+> rm -rf dist && node --max-old-space-size=8192 scripts/build/process-configs.js
+
+npm.cmd : 'rm' is not recognized as an internal or external command,
+At line:2 char:76
++ ... chunk.log -Tail 15; npm.cmd run build *> ../windows-build.log; Get-Co ...
++                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ('rm' is not rec...ternal command,:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+operable program or batch file.

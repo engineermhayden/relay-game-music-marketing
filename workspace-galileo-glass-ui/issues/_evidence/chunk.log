@@ -1,0 +1,24 @@
+
+> @veerone/galileo-glass-ui@1.0.28 test:chunk
+> node scripts/chunked-test-runner.js
+
+npm.cmd : file:///C:/Users/engin/AppData/Local/Temp/galileo-review-jifpxsra/repo/scripts/chunked-test-runner.js:5
+At line:2 char:1
++ npm.cmd run test:chunk *> ../chunk.log; Get-Content ../chunk.log -Tai ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (file:///C:/User...est-runner.js:5:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+const { execSync } = require('child_process');
+                     ^
+
+ReferenceError: require is not defined in ES module scope, you can use import instead
+This file is being treated as an ES module because it has a '.js' file extension and 
+'C:\Users\engin\AppData\Local\Temp\galileo-review-jifpxsra\repo\package.json' contains "type": "module". To treat it 
+as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///C:/Users/engin/AppData/Local/Temp/galileo-review-jifpxsra/repo/scripts/chunked-test-runner.js:5:22
+    at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.20.0

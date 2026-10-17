@@ -1,0 +1,186 @@
+🚀 Starting Galileo Glass UI build...
+📂 Loading rollup configuration...
+🔍 Found 40 build configuration(s) to process
+
+📦 Building (1/40): src/index.ts
+  📄 Generating output: dist/index.js (cjs)
+  📄 Generating output: dist/index.esm.js (esm)
+✅ Successfully built: src/index.ts
+
+📦 Building (2/40): src/core.ts
+  📄 Generating output: dist/core.js (cjs)
+  📄 Generating output: dist/core.esm.js (esm)
+✅ Successfully built: src/core.ts
+
+📦 Building (3/40): src/mixins.ts
+  📄 Generating output: dist/mixins.js (cjs)
+  📄 Generating output: dist/mixins.esm.js (esm)
+✅ Successfully built: src/mixins.ts
+
+📦 Building (4/40): src/theme/index.ts
+  📄 Generating output: dist/theme.js (cjs)
+  📄 Generating output: dist/theme.esm.js (esm)
+✅ Successfully built: src/theme/index.ts
+
+📦 Building (5/40): src/animations/index.ts
+  📄 Generating output: dist/animations.js (cjs)
+  📄 Generating output: dist/animations.esm.js (esm)
+✅ Successfully built: src/animations/index.ts
+
+📦 Building (6/40): src/components/index.ts
+  📄 Generating output: dist/components.js (cjs)
+  📄 Generating output: dist/components.esm.js (esm)
+✅ Successfully built: src/components/index.ts
+
+📦 Building (7/40): src/components/Button/index.ts
+  📄 Generating output: dist/components/Button.js (cjs)
+  📄 Generating output: dist/components/Button.esm.js (esm)
+✅ Successfully built: src/components/Button/index.ts
+
+📦 Building (8/40): src/components/Card/index.ts
+  📄 Generating output: dist/components/Card.js (cjs)
+  📄 Generating output: dist/components/Card.esm.js (esm)
+✅ Successfully built: src/components/Card/index.ts
+
+📦 Building (9/40): src/components/Charts/index.ts
+  📄 Generating output: dist/components/Charts.js (cjs)
+  📄 Generating output: dist/components/Charts.esm.js (esm)
+✅ Successfully built: src/components/Charts/index.ts
+
+📦 Building (10/40): src/components/MultiSelect/index.ts
+  📄 Generating output: dist/components/MultiSelect.js (cjs)
+  📄 Generating output: dist/components/MultiSelect.esm.js (esm)
+✅ Successfully built: src/components/MultiSelect/index.ts
+
+📦 Building (11/40): src/components/DateRangePicker/index.ts
+  📄 Generating output: dist/components/DateRangePicker.js (cjs)
+  📄 Generating output: dist/components/DateRangePicker.esm.js (esm)
+✅ Successfully built: src/components/DateRangePicker/index.ts
+
+📦 Building (12/40): src/components/Masonry/index.ts
+  📄 Generating output: dist/components/Masonry.js (cjs)
+  📄 Generating output: dist/components/Masonry.esm.js (esm)
+✅ Successfully built: src/components/Masonry/index.ts
+
+📦 Building (13/40): src/components/Timeline/index.ts
+  📄 Generating output: dist/components/Timeline.js (cjs)
+  📄 Generating output: dist/components/Timeline.esm.js (esm)
+✅ Successfully built: src/components/Timeline/index.ts
+
+📦 Building (14/40): src/hooks/index.ts
+  📄 Generating output: dist/hooks.js (cjs)
+  📄 Generating output: dist/hooks.esm.js (esm)
+✅ Successfully built: src/hooks/index.ts
+
+📦 Building (15/40): src/slim.ts
+  📄 Generating output: dist/slim.js (cjs)
+  📄 Generating output: dist/slim.esm.js (esm)
+✅ Successfully built: src/slim.ts
+
+📦 Building (16/40): src/animations/physics/index.ts
+  📄 Generating output: dist/animations/physics/index.js (cjs)
+  📄 Generating output: dist/animations/physics/index.esm.js (esm)
+✅ Successfully built: src/animations/physics/index.ts
+
+📦 Building (17/40): src/components/DataChart/hooks/useChartPhysicsInteraction.ts
+  📄 Generating output: dist/components/DataChart/hooks/useChartPhysicsInteraction.js (cjs)
+  📄 Generating output: dist/components/DataChart/hooks/useChartPhysicsInteraction.esm.js (esm)
+✅ Successfully built: src/components/DataChart/hooks/useChartPhysicsInteraction.ts
+
+📦 Building (18/40): src/animations/physics/useMagneticElement.ts
+  📄 Generating output: dist/animations/physics/useMagneticElement.js (cjs)
+  📄 Generating output: dist/animations/physics/useMagneticElement.esm.js (esm)
+✅ Successfully built: src/animations/physics/useMagneticElement.ts
+
+📦 Building (19/40): src/animations/orchestration/useAnimationSequence.ts
+  📄 Generating output: dist/animations/orchestration/useAnimationSequence.js (cjs)
+  📄 Generating output: dist/animations/orchestration/useAnimationSequence.esm.js (esm)
+✅ Successfully built: src/animations/orchestration/useAnimationSequence.ts
+
+📦 Building (20/40): src/animations/physics/gestures/useGesturePhysics.ts
+  📄 Generating output: dist/animations/physics/gestures/useGesturePhysics.js (cjs)
+  📄 Generating output: dist/animations/physics/gestures/useGesturePhysics.esm.js (esm)
+✅ Successfully built: src/animations/physics/gestures/useGesturePhysics.ts
+
+📦 Building (21/40): src/index.ts
+  📄 Generating output: dist/index.d.ts (es)
+✅ Successfully built: src/index.ts
+
+📦 Building (22/40): src/slim.ts
+  📄 Generating output: dist/slim.d.ts (es)
+✅ Successfully built: src/slim.ts
+
+📦 Building (23/40): src/animations/physics/index.ts
+  📄 Generating output: dist/animations/physics/index.d.ts (es)
+✅ Successfully built: src/animations/physics/index.ts
+
+📦 Building (24/40): src/mixins.ts
+  📄 Generating output: dist/mixins.d.ts (es)
+✅ Successfully built: src/mixins.ts
+
+📦 Building (25/40): src/animations/index.ts
+  📄 Generating output: dist/animations.d.ts (es)
+✅ Successfully built: src/animations/index.ts
+
+📦 Building (26/40): src/core.ts
+  📄 Generating output: dist/core.d.ts (es)
+✅ Successfully built: src/core.ts
+
+📦 Building (27/40): src/components/index.ts
+  📄 Generating output: dist/components.d.ts (es)
+✅ Successfully built: src/components/index.ts
+
+📦 Building (28/40): src/components/Button/index.ts
+  📄 Generating output: dist/components/Button.d.ts (es)
+✅ Successfully built: src/components/Button/index.ts
+
+📦 Building (29/40): src/components/Card/index.ts
+  📄 Generating output: dist/components/Card.d.ts (es)
+✅ Successfully built: src/components/Card/index.ts
+
+📦 Building (30/40): src/components/Charts/index.ts
+  📄 Generating output: dist/components/Charts.d.ts (es)
+✅ Successfully built: src/components/Charts/index.ts
+
+📦 Building (31/40): src/components/MultiSelect/index.ts
+  📄 Generating output: dist/components/MultiSelect.d.ts (es)
+✅ Successfully built: src/components/MultiSelect/index.ts
+
+📦 Building (32/40): src/components/DateRangePicker/index.ts
+  📄 Generating output: dist/components/DateRangePicker.d.ts (es)
+✅ Successfully built: src/components/DateRangePicker/index.ts
+
+📦 Building (33/40): src/components/Masonry/index.ts
+  📄 Generating output: dist/components/Masonry.d.ts (es)
+✅ Successfully built: src/components/Masonry/index.ts
+
+📦 Building (34/40): src/components/Timeline/index.ts
+  📄 Generating output: dist/components/Timeline.d.ts (es)
+✅ Successfully built: src/components/Timeline/index.ts
+
+📦 Building (35/40): src/hooks/index.ts
+  📄 Generating output: dist/hooks/index.d.ts (es)
+✅ Successfully built: src/hooks/index.ts
+
+📦 Building (36/40): src/theme/index.ts
+  📄 Generating output: dist/theme.d.ts (es)
+✅ Successfully built: src/theme/index.ts
+
+📦 Building (37/40): src/components/DataChart/hooks/useChartPhysicsInteraction.ts
+  📄 Generating output: dist/components/DataChart/hooks/useChartPhysicsInteraction.d.ts (es)
+✅ Successfully built: src/components/DataChart/hooks/useChartPhysicsInteraction.ts
+
+📦 Building (38/40): src/animations/physics/useMagneticElement.ts
+  📄 Generating output: dist/animations/physics/useMagneticElement.d.ts (es)
+✅ Successfully built: src/animations/physics/useMagneticElement.ts
+
+📦 Building (39/40): src/animations/orchestration/useAnimationSequence.ts
+  📄 Generating output: dist/animations/orchestration/useAnimationSequence.d.ts (es)
+✅ Successfully built: src/animations/orchestration/useAnimationSequence.ts
+
+📦 Building (40/40): src/animations/physics/gestures/useGesturePhysics.ts
+  📄 Generating output: dist/animations/physics/gestures/useGesturePhysics.d.ts (es)
+✅ Successfully built: src/animations/physics/gestures/useGesturePhysics.ts
+
+✨ Build completed successfully! ✨
+BUILD_EXIT=0

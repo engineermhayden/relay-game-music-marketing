@@ -1,0 +1,36 @@
+[
+  {
+    "id":"verdant","name":"The Verdant Expanse","sector":"07 / KEPLER-9","difficulty":"Explorer","duration":720,
+    "description":"A quiet first contact among luminous crystal meadows.",
+    "rule":"Collect fragments, power all three relays, and transmit from the central pad.",
+    "weather":"aurora","ordered":false,"sentinelCount":3,"sentinelSpeed":0.16,"sentinelRadius":10,
+    "palette":{"sky":"#071c23","ground":"#193a39","rock":"#102827","accent":"#a9ed7c","flora":"#508b79","moon":"#87a69a","rim":"#5bc1d2"},
+    "relays":[{"name":"Echo Spire","x":-12,"z":-8},{"name":"Verdant Array","x":12,"z":-8},{"name":"Horizon Gate","x":0,"z":14}],"zones":[]
+  },
+  {
+    "id":"ember","name":"Ember Caldera","sector":"12 / PYRA","difficulty":"Hazardous","duration":660,
+    "description":"An obsidian outpost above a molten sea. Time your crossing between eruptions.",
+    "rule":"Orange vents pulse for 4 of every 10 seconds. Cross when the warning rings dim; active heat drains shields.",
+    "weather":"clear","ordered":false,"sentinelCount":3,"sentinelSpeed":0.20,"sentinelRadius":14,
+    "palette":{"sky":"#25121f","ground":"#4b302f","rock":"#231d29","accent":"#ffb668","flora":"#ba674b","moon":"#cf8066","rim":"#ff8864"},
+    "relays":[{"name":"Cinder Crown","x":-16,"z":-4},{"name":"Magma Array","x":10,"z":-14},{"name":"Ashfall Gate","x":6,"z":16}],
+    "zones":[{"x":-9,"z":-2,"radius":3.5,"kind":"heat"},{"x":6,"z":-8,"radius":3.5,"kind":"heat"},{"x":3,"z":9,"radius":3.5,"kind":"heat"}]
+  },
+  {
+    "id":"glacier","name":"The Glacial Reach","sector":"19 / NIVALIS","difficulty":"Tactical","duration":780,
+    "description":"Blue ice cathedrals beneath a frozen moon. Find clear routes through the frost.",
+    "rule":"Blue frost fields reduce movement to 55%. Route around them or sprint through; four sentinels patrol the outer ring.",
+    "weather":"aurora","ordered":false,"sentinelCount":4,"sentinelSpeed":0.12,"sentinelRadius":15,
+    "palette":{"sky":"#0b1c38","ground":"#345368","rock":"#152d48","accent":"#8de9ff","flora":"#80b9de","moon":"#c2d9ed","rim":"#87bfff"},
+    "relays":[{"name":"Boreal Lens","x":-17,"z":-6},{"name":"Frostline Array","x":16,"z":-7},{"name":"Aurora Gate","x":-3,"z":18}],
+    "zones":[{"x":-10,"z":-3,"radius":4,"kind":"frost"},{"x":9,"z":-4,"radius":4,"kind":"frost"},{"x":-2,"z":10,"radius":4,"kind":"frost"}]
+  },
+  {
+    "id":"tempest","name":"Tempest Circuit","sector":"28 / VESPER","difficulty":"Expert","duration":600,
+    "description":"A violet storm station with a broken power grid and a narrow signal window.",
+    "rule":"Restore relays in sequence: Arc One, Arc Two, then Zenith. Five fast sentinels guard the circuit; storm weather increases their damage.",
+    "weather":"storm","ordered":true,"sentinelCount":5,"sentinelSpeed":0.28,"sentinelRadius":12,
+    "palette":{"sky":"#191331","ground":"#342d52","rock":"#1a1931","accent":"#d8a8ff","flora":"#926cae","moon":"#af97d1","rim":"#a58cff"},
+    "relays":[{"name":"Arc One","x":-15,"z":10},{"name":"Arc Two","x":0,"z":-17},{"name":"Zenith","x":15,"z":10}],"zones":[]
+  }
+]

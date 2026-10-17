@@ -1,0 +1,3 @@
+MISSING ./minimal import ./dist-min/minimal.esm.js
+MISSING ./minimal require ./dist-min/minimal.js
+PRESENT_EXPORT_TARGETS 30
