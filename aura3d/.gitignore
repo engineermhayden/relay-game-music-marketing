@@ -10,3 +10,5 @@ __pycache__/
 test-results/
 playwright-report/
 artifacts/
+postgres_data/
+redis_data/
