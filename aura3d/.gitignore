@@ -1,5 +1,6 @@
 .github
 .env
+.env.prod
 .env.files/
 .reference/
 node_modules/
