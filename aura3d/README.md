@@ -24,7 +24,49 @@ docker compose stop
 docker compose up -d
 ```
 
-Named volumes retain the database and Redis AOF across container restarts. Do not remove those volumes if you want to retain missions.
+The `postgres_data` and `redis_data` folders retain the database and Redis AOF across container restarts. Music uploads persist in the `music_media` named volume.
+
+If another application uses port 8080, select a free port and matching CSRF origins before starting the stack:
+
+```powershell
+$env:HTTP_PORT='127.0.0.1:8088'
+$env:CSRF_TRUSTED_ORIGINS='http://localhost:8088,http://127.0.0.1:8088'
+docker compose up --build -d
+```
+
+Use that port in the site and admin URLs below. `docker compose start --wait` restarts existing stopped containers with their previously configured port.
+
+## Backend administrator URL
+
+Set `DJANGO_ADMIN_URL` in `.env` (or in `.env.prod` when using `--env-file .env.prod`) to choose the admin path on your site's domain. The default is `admin/`. For example, `DJANGO_ADMIN_URL=control-panel/` places the admin at `https://your-domain.com/control-panel/` and music management at `/control-panel/music/track/`. Nested paths such as `staff/backend/` work too; leading/trailing slashes are normalized. Supply a path, not a full URL. API, media, static and WebSocket prefixes are reserved.
+
+Both Compose configurations pass this setting to Django and nginx. After the initial code update, rebuild with `docker compose up -d --build api nginx` (include your usual production Compose/env-file flags when applicable). Later environment-only changes require `docker compose up -d api nginx` to recreate the affected containers; `docker compose restart` does not load changed environment settings. Use the selected path in place of `/admin/` in the examples below. For Vite development, the same setting is read from the repository root `.env` or the shell environment; restart Vite after changing it.
+
+## Music library and uploads
+
+The persistent **RELAY RADIO** bar plays music while visitors explore, change destinations, open panels, or play with a squad. It supports play/pause, next track, mute, volume, seeking, a clickable track list, **Loop song**, **Loop playlist**, and **Repeat off**. Use the up/down arrows beside each song to reorder your playlist. The browser remembers your order, selected song, volume, mute and repeat preferences. These are personal listening settings; they do not change other visitors' playlists. The viewport speaker button continues to control game sound effects separately.
+
+The player attempts playback on a new visit. If the browser blocks audible autoplay, press **Play** once. After that, songs advance automatically. **Loop playlist** is the default; **Repeat off** stops after the last song. **Next track** always advances, including when looping one song, and wraps to the beginning when clicked on the last song. Playback continues across in-app navigation; a full page reload restores your selection but starts that song from the beginning, subject to browser autoplay policy.
+
+Create your backend administrator once (choose your own username and password):
+
+```powershell
+docker compose exec api python manage.py createsuperuser
+```
+
+Open **http://localhost:8080/admin/music/track/**, sign in, and choose **Add track**. Upload an audio file and enter **title**, **author / composer**, **artist / band name**, **artist website**, **cover art**, **audio description**, and **artist / group description**. Leave **Is published** checked to add it to the public library. Title and audio are required; the remaining credits can be filled in later. Published releases are automatically appended to visitors' personal queues within 30 seconds while the tab is visible, on window focus, or immediately using **Refresh tracks**. Updating metadata does not interrupt the currently playing recording. Removing or unpublishing a track removes it from the queue on the next refresh.
+
+The DRF browsable upload/edit interface is also available at **/api/music/tracks/** after signing in at **/api-auth/login/** (or the admin). JSON clients use `Accept: application/json`. Audio and covers use `multipart/form-data`; metadata-only changes can use JSON `PATCH /api/music/tracks/{id}/`. Reads are public; uploads, edits and deletes require an authenticated staff account with a CSRF token. Django admin additionally honors its normal model permissions; a superuser has them automatically. Guest game sessions cannot upload music.
+
+Audio is validated and limited to **100 MB** per file: MP3 (recommended), WAV, OGG, M4A, FLAC, or Opus. Browser codec support varies; use MP3 for broad compatibility. Covers must be JPEG, PNG, or WebP, up to **5 MB**. Duration is detected automatically. The three supplied files in `marketing/sample-songs` import automatically on API startup, using embedded titles/credits when present. Two recordings share the embedded title `count's bounce`; you can distinguish them by editing their titles in the admin. Unpublish bundled samples to hide them persistently; deleting a bundled sample allows the startup importer to add it again. Importing again preserves existing edits and publication settings:
+
+```powershell
+docker compose exec api python manage.py import_songs
+```
+
+Uploaded files live in the persistent Compose **music_media** volume, mounted read-only by nginx for efficient audio streaming and byte-range seeking. Back up this volume together with PostgreSQL. Do not remove it with `docker compose down -v`. Unpublishing hides a recording from the catalog; previously issued media URLs remain public. The **backend_static** volume contains generated admin/DRF CSS and JavaScript. nginx allows 110 MB requests only on the music/admin routes; configure your outer gateway's upload limit to at least 110 MB too (see `deploy/nginx/ispconfig.md`).
+
+For frontend development against Compose, set `$env:API_PROXY_TARGET='http://localhost:8080'` before `npm.cmd run dev`. This proxies the API, media, admin and static assets through Vite. Use your actual Compose port if it differs, and add the Vite origin to `CSRF_TRUSTED_ORIGINS` when editing music through that origin.
 
 ## Anthropic / ORA
 
@@ -173,6 +215,10 @@ The spatial coordinates are fictional world meters stored as planar PostGIS poin
 | `GET /api/rooms/{code}/nearby/` | Member-only PostGIS proximity query |
 | `POST /api/rooms/{code}/ai/` | Member-only bounded Claude request |
 | `GET /api/leaderboard/` | Completed public missions |
+| `GET/POST /api/music/tracks/` | Public music catalog; staff multipart upload |
+| `GET/PATCH/PUT/DELETE /api/music/tracks/{id}/` | Track metadata; staff edits / removal |
+| `/admin/music/track/` | Staff music management, upload and publication forms |
+| `/api-auth/login/` | Staff session login for the DRF browsable API |
 | `WS /ws/rooms/{code}/` | Session-authorized room updates and movement/actions |
 
 Unsafe HTTP requests require the session bootstrap’s CSRF token in `X-CSRFToken`. WebSocket connections require a member’s session cookie and a permitted origin. Public leaderboard entries exclude private rooms.
@@ -186,7 +232,7 @@ python -m unittest discover -s backend/tests -v
 # Real PostGIS/Redis integration and schema checks:
 docker compose exec api python manage.py check
 docker compose exec api python manage.py makemigrations --check --dry-run
-docker compose exec api python manage.py test game --noinput -v 2
+docker compose exec api python manage.py test game music --noinput -v 2
 
 # Frontend build:
 cd frontend
@@ -199,10 +245,16 @@ $env:NETWORK_TESTS='1'
 npm.cmd run test:e2e
 ```
 
-For frontend-only work, run `npm.cmd run dev` in `frontend`, then open `http://localhost:5173`. It starts in local preview if no API is reachable. Vite proxies to a locally running backend on port 8000; production Compose does not expose that port. To use the Docker API during frontend development, set the proxy target to `http://localhost:8080` and include the dev origin in `CSRF_TRUSTED_ORIGINS`.
+Music coverage includes real browser playback, all repeat modes, personal ordering and preferences, new releases, keyboard isolation, and MP3 streaming during live gameplay. To verify an actual staff upload through nginx (creates and removes a temporary account, song and cover):
+
+```powershell
+Get-Content -Raw scripts/smoke_music.py | docker compose exec -T api python -
+```
+
+For frontend-only work, run `npm.cmd run dev` in `frontend`, then open `http://localhost:5173`. It starts in local preview if no API is reachable. Vite proxies to a locally running backend on port 8000 by default; production Compose does not expose that port. To use the Docker API and nginx media serving during frontend development, set `$env:API_PROXY_TARGET='http://localhost:8080'` and include the dev origin in `CSRF_TRUSTED_ORIGINS`.
 
 Playwright captures desktop, mobile, and lab screenshots under `artifacts/`. Browser tests cover every destination, WASD/arrows, clean scene switching, native physics, mobile layout, focus-loss stopping, socket reconnection, session resume, shared movement, room isolation and unauthorized access rejection. Four separate squads also complete all four missions concurrently using only real WebSocket movement/interact messages; no positions or resources are injected into the server. Pure rule tests cover pulsing heat, frost speed, ordered relays, rescue and solo completion. API tests verify destination validation and PostGIS recovery. Integration tests mock/disable paid AI; the live credential check is separate and opt-in.
 
-`npm audit` currently reports transitive advisories through Aura3D’s `@loaders.gl/textures → texture-compressor` dependencies (`image-size`, `sprintf-js`), without an upstream compatible fix. The app does not expose the compressor or accept uploaded models/images. These findings still need tracking when updating Aura3D; they have not been silently overridden. Vite is pinned to a patched 7.3.7. The engine build also warns about unused bundled humanoid/Basis assets and a large lazy Rapier chunk. The app uses its own hashed, uncompressed GLB; those absent optional assets are not required by the current scene.
+`npm audit` currently reports transitive advisories through Aura3D’s `@loaders.gl/textures → texture-compressor` dependencies (`image-size`, `sprintf-js`), without an upstream compatible fix. The app does not expose the compressor or accept uploaded 3D models; staff-uploaded music covers are validated by Django/Pillow and are never passed through Aura3D. These findings still need tracking when updating Aura3D; they have not been silently overridden. Vite is pinned to a patched 7.3.7. The engine build also warns about unused bundled humanoid/Basis assets and a large lazy Rapier chunk. The app uses its own hashed, uncompressed GLB; those absent optional assets are not required by the current scene.
 
 Sources: [Aura3D repository](https://github.com/auraoneai/aura3d), [Anthropic Messages API](https://platform.claude.com/docs/en/api/messages/create).

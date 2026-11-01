@@ -25,6 +25,9 @@ Replace `your-domain.com` and the upstream `127.0.0.1:8080` below with your valu
 Paste this into **Options → nginx Directives** and save:
 
 ```nginx
+# Music uploads: audio (100 MB) + cover (5 MB) + multipart fields.
+client_max_body_size 110m;
+
 # SPA, static assets and /api/
 location / {
     proxy_pass http://127.0.0.1:8080;

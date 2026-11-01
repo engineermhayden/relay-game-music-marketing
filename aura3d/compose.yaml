@@ -38,8 +38,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-development-only-change-before-public-deployment}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
-    command: sh -c "python manage.py migrate --noinput && uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips='*'"
+    volumes: ["music_media:/app/media", "backend_static:/app/staticfiles"]
+    command: sh -c "python manage.py migrate --noinput && python manage.py import_songs && python manage.py collectstatic --noinput && uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips='*'"
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -59,6 +61,9 @@ services:
     restart: unless-stopped
   nginx:
     build: { context: ., dockerfile: deploy/nginx/Dockerfile }
+    environment:
+      DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}
+    volumes: ["music_media:/srv/media:ro", "backend_static:/srv/static:ro"]
     ports: ["${HTTP_PORT:-8080}:80"]
     depends_on:
       api: { condition: service_healthy }
@@ -68,4 +73,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+volumes:
+  music_media:
+  backend_static:
 

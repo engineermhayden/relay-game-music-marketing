@@ -171,7 +171,7 @@ export function App(){
 
     const down=(e:KeyboardEvent)=>{
 
-      if((e.target as HTMLElement).closest('input,textarea,select')||modal)return;
+      if((e.target as HTMLElement).closest('input,textarea,select,[data-game-input="ignore"]')||modal)return;
 
       if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
 
@@ -313,7 +313,7 @@ export function App(){
 
         {options.lab&&metrics.evidence&&<details className="diagnostic-panel"><summary><Activity size={14}/> Live renderer evidence <span>Reported by Aura3D</span></summary><div className="evidence-grid"><span>Bloom pass <b>{metrics.evidence.bloom?'Rendered':'Not reported'}</b></span><span>Fog <b>{metrics.evidence.fog?'Enabled':'Off'}</b></span><span>Shadow map <b>{metrics.evidence.shadowMap?'Rendered':'Not reported'}</b></span><span>Instanced submissions <b>{metrics.evidence.instancedSubmissions}</b></span><span>GLB animation clips <b>{metrics.evidence.animatedAssets}</b></span></div><p>These are runtime reports, not a claim of visual parity. A requested feature may be unavailable on this renderer path.</p><ul>{metrics.evidence.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
 
-        <footer><span>BUILT TO EXPLORE. POWERED BY <strong>AURA3D.</strong></span><button onClick={()=>openModal('capabilities')}>Explore the technology <ArrowUpRight size={13}/></button><span>POWERED BY <strong>HAYDEN-FISHER TECHNOLOGIES, INC.</strong></span><span>RELAY / EXPERIMENT 001</span></footer>
+        <footer><span>BUILT TO EXPLORE. POWERED BY <strong>AURA3D.</strong></span><button onClick={()=>openModal('capabilities')}>Explore the technology <ArrowUpRight size={13}/></button><span>POWERED BY <strong><a href="https://haydenfishertech.com/" target="_blank" rel="noreferrer">HAYDEN-FISHER TECHNOLOGIES, INC.</a></strong></span><span>RELAY / EXPERIMENT 001</span></footer>
 
       </main>
 

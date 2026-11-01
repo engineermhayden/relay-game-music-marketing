@@ -6,6 +6,8 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 COPY shared/ /shared/
-RUN useradd --system --uid 10001 relay && chown -R relay:relay /app
+COPY marketing/sample-songs/ /sample-songs/
+ENV SAMPLE_SONGS_DIR=/sample-songs
+RUN mkdir -p /app/media /app/staticfiles && useradd --system --uid 10001 relay && chown -R relay:relay /app
 USER relay
 EXPOSE 8000

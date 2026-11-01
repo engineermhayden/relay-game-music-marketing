@@ -9,3 +9,5 @@ artifacts
 **/__pycache__
 postgres_data
 redis_data
+backend/media
+backend/staticfiles
