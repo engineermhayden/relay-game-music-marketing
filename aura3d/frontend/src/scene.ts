@@ -1,9 +1,10 @@
-import { camera, createAuraApp, effects, instances, lights, material, model, primitives as p, scene, type AuraSceneNode, type AuraTransformSpec } from '@aura3d/engine';
+import { camera, createAuraApp, effects, instances, interactions, lights, material, model, primitives as p, scene, type AuraSceneNode, type AuraTransformSpec } from '@aura3d/engine';
 import type { Metrics, RenderOptions, World } from './types';
 import { assets } from './assets';
 import { levelFor, heatActive } from './levels';
 import { Motion, type MovementInput } from './motion';
 import { createCameraControls } from './cameraControls';
+import { collectRendererEvidence } from './rendererEvidence';
 
 const glow=(color:string,intensity=2)=>material.emissive({color,emissive:color,emissiveIntensity:intensity,roughness:.3});
 function rng(seed:number){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
@@ -14,6 +15,10 @@ export function mountWorld(canvas:HTMLCanvasElement,initial:World,options:Render
   const batches=new Map<string,{material:ReturnType<typeof material.pbr>;transforms:AuraTransformSpec[]}>();
   const box=(key:string,mat:ReturnType<typeof material.pbr>,transform:AuraTransformSpec)=>{if(!batches.has(key))batches.set(key,{material:mat,transforms:[]});batches.get(key)!.transforms.push(transform);};
   const world=scene().background(palette.sky);
+  // Declare the input supplied by App and cameraControls for Aura3D's scene audit.
+  // Keep the existing camera rig as the sole owner of orbit/pan/zoom gestures.
+  world.add(interactions.pointer());
+  world.add(interactions.keyboard());
   world.add(lights.ambient({intensity:.85,color:'#9fcac6'}));
   world.add(lights.directional({position:[-20,40,10],color:'#e2ffca',intensity:2.6,shadow:options.shadows}));
   world.add(lights.directional({position:[20,12,-30],color:palette.rim,intensity:1.4}));
@@ -22,6 +27,11 @@ export function mountWorld(canvas:HTMLCanvasElement,initial:World,options:Render
   // All geometry below is authored through Aura3D's public scene API.
   world.add(p.cylinder({name:'island-foundation',size:[51,2.2,51],material:dark}).position(0,-1.5,0));
   world.add(p.cylinder({name:'island-surface',size:[49,.55,49],material:stone,receiveShadow:true}).position(0,-.2,0));
+  // The current WebGL2 post path drops SSAO without normals. Use a real,
+  // inexpensive grounding mesh instead of declaring an unsupported effect.
+  if(options.shadows)world.add(instances.cylinder({name:'relay-contact-shadow-footprints',castShadow:false,receiveShadow:false,
+    material:material.pbr({color:'#030712',roughness:.94,opacity:.22}),
+    transforms:initial.relays.map(relay=>({position:[relay.x,.085,relay.z],scale:[6.2,.012,6.2]}))}));
   world.add(p.torus({name:'perimeter',material:glow('#347774',.6)}).rotate(Math.PI/2,0,0).scale([24.5,24.5,.1]).position(0,.05,0));
   for(let i=0;i<12;i++){
     const a=i*Math.PI/6;
@@ -153,11 +163,13 @@ export function mountWorld(canvas:HTMLCanvasElement,initial:World,options:Render
     if(me){const scan=Math.max(0,me.scan-s.now);visible(pulse,scan>0);if(scan>0)pulse.setPosition(me.x,.24,me.z).setScale([1+(4-scan)*4,1+(4-scan)*4,.025]);}
     frames++;elapsed+=dt;
     if(performance.now()-last>1000){
-      const fps=frames/Math.max(.01,elapsed),d=app.diagnostics();const renderer=d.renderer as unknown as {bloom?:{rendered?:boolean};fog?:{enabled?:boolean};shadows?:{mapRendered?:boolean};runtime?:{nativeInstancedSubmissions?:number};warnings?:string[]};
+      const fps=frames/Math.max(.01,elapsed),d=app.diagnostics();
       // Adapt only after sustained pressure, and never rebuild the scene to change resolution.
       slowWindows=fps<38?slowWindows+1:0;
-      if(options.quality==='auto'&&slowWindows>=3&&resolution>.7){resolution=Math.max(.7,resolution-.15);slowWindows=0;queueMicrotask(()=>{if(alive)app.setPerformanceQuality({resolutionScale:resolution,particleScale:resolution,lodBias:1,shadowSize:512});});}
-      onMetrics({fps:Math.round(fps),frameMs:Math.round(elapsed/frames*1000),resolution,draws:d.drawCalls??0,backend:String(d.backend),triangles:Number((d as unknown as Record<string,unknown>).triangles??0),errors:(d.errors??[]).map(String),evidence:{bloom:renderer?.bloom?.rendered===true,fog:renderer?.fog?.enabled===true,shadowMap:renderer?.shadows?.mapRendered===true,instancedSubmissions:renderer?.runtime?.nativeInstancedSubmissions??0,animatedAssets:ora.importedAssetEvidence()?.clips.length??0,warnings:[...(d.warnings??[]).map(String),...(renderer?.warnings??[])]}});frames=0;elapsed=0;last=performance.now();
+      // Particle scaling requires an attached native owner, which is absent
+      // when particles are off. Adaptive quality only changes resolution.
+      if(options.quality==='auto'&&slowWindows>=3&&resolution>.7){resolution=Math.max(.7,resolution-.15);slowWindows=0;queueMicrotask(()=>{if(alive)app.setPerformanceQuality({resolutionScale:resolution,particleScale:1,lodBias:1,shadowSize:512});});}
+      onMetrics({fps:Math.round(fps),frameMs:Math.round(elapsed/frames*1000),resolution,draws:d.drawCalls??0,backend:String(d.backend),triangles:Number((d as unknown as Record<string,unknown>).triangles??0),errors:(d.errors??[]).map(String),evidence:collectRendererEvidence(d,options,ora.importedAssetEvidence()?.clips.length??0)});frames=0;elapsed=0;last=performance.now();
     }
   });
   let lastState=initial,lastStateTime=performance.now();

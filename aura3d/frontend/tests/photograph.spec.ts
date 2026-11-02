@@ -19,6 +19,8 @@ test('downloaded photographs contain scene pixels across destinations, cameras a
     const downloaded=page.waitForEvent('download',{timeout:15000});
     await page.getByRole('button',{name:'Save photograph',exact:true}).click();
     const download=await downloaded;
+    // Check the transient toast before PNG decoding can outlast its lifetime.
+    await expect(page.getByRole('status')).toContainText('photograph saved');
     expect(download.suggestedFilename()).toBe(`relay-${id==='lab'?'tempest':id}.png`);
     const file=`../artifacts/photographs/${id}.png`;await download.saveAs(file);
     expect(await download.failure()).toBeNull();
@@ -41,7 +43,6 @@ test('downloaded photographs contain scene pixels across destinations, cameras a
     expect(pixels.colors,'PNG must contain varied scene colors, not a flat clear buffer').toBeGreaterThan(32);
     expect(pixels.bright).toBeGreaterThan(100);expect(pixels.opaque).toBeGreaterThan(24000);
     await test.info().attach(`photograph-${id}`,{body:JSON.stringify(pixels),contentType:'application/json'});
-    await expect(page.getByRole('status')).toContainText('photograph saved');
     await expect(page.locator('.renderer-error')).toHaveCount(0);
   }
   // A photo must not leave the game paused or lose its input loop.
