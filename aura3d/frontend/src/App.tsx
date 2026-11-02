@@ -62,7 +62,10 @@ const Viewport=memo(function Viewport({worldRef,pilotId,options,weather,seed,lev
 
   },[options,weather,seed,levelId,pilotId,onMetrics,onError,worldRef,runtimeRef,getInput]);
 
-  return <canvas ref={canvas} className="world-canvas" aria-label="Interactive Aura3D alien expedition world" tabIndex={0}/>;
+  // Aura3D 4 retains a VFX attachment on disposed canvases. Each scene rebuild
+  // needs a fresh canvas so the next app can attach its particle renderer.
+  const sceneKey=JSON.stringify([options,weather,seed,levelId,pilotId]);
+  return <canvas key={sceneKey} ref={canvas} className="world-canvas" aria-label="Interactive Aura3D alien expedition world" tabIndex={0}/>;
 
 });
 
@@ -311,7 +314,20 @@ export function App(){
 
         {options.lab?<section className="lab-panel panel"><div><div className="eyebrow">THE ENGINE, EXPOSED</div><h2>Change something. See it happen.</h2><p>Native Aura3D rendering and physics. Gameplay authority stays on the server.</p></div><div className="lab-controls">{(['bloom','fog','particles','shadows'] as const).map(k=><label key={k} className="toggle-label"><span>{k}</span><input type="checkbox" checked={options[k]} onChange={e=>option(k,e.target.checked)}/><i/></label>)}<label className="select-label">Material <select value={options.material} onChange={e=>option('material',e.target.value)}><option>ceramic</option><option>metal</option><option>glass</option></select></label><label className="select-label">Resolution <select value={options.quality} onChange={e=>option('quality',e.target.value)}><option value="auto">Adaptive</option><option value="high">High</option><option value="low">Low</option></select></label><button className="button secondary" onClick={()=>{try{runtimeRef.current?.impulse();}catch(e){notify(String(e));}}}><ArrowUp size={16}/> Physics impulse</button><button className="text-button" onClick={()=>openModal('capabilities')}>Capability atlas <ArrowUpRight size={15}/></button></div></section>:<section className="bottom-grid"><div className="squad-card panel"><div className="card-icon"><Users size={22}/></div><div><span className="eyebrow">BETTER, TOGETHER</span><h3>{room?room.name:'One world. Your whole squad.'}</h3><p>{room?`${world.players.filter(p=>p.connected).length} pilots connected · room ${room.code}`:'Up to 8 explorers per expedition. Multiple squads, separate worlds.'}</p></div><button className="round-arrow" aria-label={room?'Copy invite':'Join expedition'} onClick={()=>room?void copyInvite():openModal('join')}>{room?<Copy size={18}/>:<ArrowUpRight size={20}/>}</button></div><div className="score-card panel"><div className="card-icon"><Zap size={22}/></div><div><span className="eyebrow">EXPEDITION SCORE</span><strong>{world.score.toLocaleString().padStart(4,'0')}</strong></div><button className="text-button" onClick={()=>openModal('scores')}>Leaderboard <ArrowUpRight size={14}/></button></div><div className="survey-card panel"><div className="card-icon"><MapPin size={22}/></div><div><span className="eyebrow">SPATIAL INTELLIGENCE</span><h3>{nearby?`${nearby[0]?.name??'No landmarks'}`:'Know your surroundings.'}</h3><p>{nearby?`${nearby[0]?.distance??0}m away · ${room?'PostGIS proximity query':'local preview distance'}`:'Discover nearby relays with spatial queries.'}</p></div><button className="round-arrow" aria-label="Query nearby landmarks" onClick={()=>void survey()}><Crosshair size={19}/></button></div></section>}
 
-        {options.lab&&metrics.evidence&&<details className="diagnostic-panel"><summary><Activity size={14}/> Live renderer evidence <span>Reported by Aura3D</span></summary><div className="evidence-grid"><span>Bloom pass <b>{metrics.evidence.bloom?'Rendered':'Not reported'}</b></span><span>Fog <b>{metrics.evidence.fog?'Enabled':'Off'}</b></span><span>Shadow map <b>{metrics.evidence.shadowMap?'Rendered':'Not reported'}</b></span><span>Instanced submissions <b>{metrics.evidence.instancedSubmissions}</b></span><span>GLB animation clips <b>{metrics.evidence.animatedAssets}</b></span></div><p>These are runtime reports, not a claim of visual parity. A requested feature may be unavailable on this renderer path.</p><ul>{metrics.evidence.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
+        {options.lab&&metrics.evidence&&<details className="diagnostic-panel">
+          <summary><Activity size={14}/> Live renderer evidence <span>Reported by Aura3D</span></summary>
+          <div className="evidence-grid">
+            <span>Bloom pass <b>{metrics.evidence.bloom}</b></span><span>Fog <b>{metrics.evidence.fog}</b></span>
+            <span>Shadow map <b>{metrics.evidence.shadowMap}</b></span><span>Grounding <b>{metrics.evidence.grounding}</b></span>
+            <span>Particles <b>{metrics.evidence.particles}</b></span>
+            <span>Instanced submissions (total) <b>{metrics.evidence.instancedSubmissions.toLocaleString()}</b></span>
+            <span>GLB animation clips <b>{metrics.evidence.animatedAssets}</b></span>
+          </div>
+          <p>These are runtime reports, not a claim of visual parity. Requested features may be unavailable on this renderer path. Grounding uses lightweight blob footprints beneath relay bases. Instanced submissions accumulate since scene mount; the viewport draw count is per frame.</p>
+          <p>Pointer, touch and keyboard controls are provided by RELAY. The Shadows toggle controls shadow requests and grounding footprints together.</p>
+          {metrics.evidence.limitations.length>0&&<><p>Runtime limitations</p><ul>{metrics.evidence.limitations.map((w,i)=><li key={i}>{w}</li>)}</ul></>}
+          <details><summary>Raw Aura3D reports</summary><p>Includes informational scene, lighting and renderer messages.</p><ul>{metrics.evidence.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>
+        </details>}
 
         <footer><span>BUILT TO EXPLORE. POWERED BY <strong>AURA3D.</strong></span><button onClick={()=>openModal('capabilities')}>Explore the technology <ArrowUpRight size={13}/></button><span>POWERED BY <strong><a href="https://haydenfishertech.com/" target="_blank" rel="noreferrer">HAYDEN-FISHER TECHNOLOGIES, INC.</a></strong></span><span>RELAY / EXPERIMENT 001</span></footer>
 

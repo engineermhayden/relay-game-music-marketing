@@ -7,4 +7,5 @@ export interface World { level?: string; seed: number; started: number; duration
 export interface Room { level?: string; code: string; name: string; seed: number; status: string; score: number; private: boolean; players: number; created: string }
 export interface Session { pilot: Pilot | null; csrf: string; ai: { configured: boolean; model: string; daily_limit: number } }
 export interface RenderOptions { bloom: boolean; fog: boolean; particles: boolean; shadows: boolean; camera: 'overview' | 'follow'; quality: 'auto' | 'high' | 'low'; lab: boolean; material: 'ceramic' | 'metal' | 'glass' }
-export interface Metrics { frameMs?:number; resolution?:number; fps: number; draws: number; backend: string; triangles: number; errors: string[]; evidence?: { bloom: boolean; fog: boolean; shadowMap: boolean; instancedSubmissions: number; animatedAssets: number; warnings: string[] } }
+export interface RendererEvidence { bloom: string; fog: string; shadowMap: string; grounding: string; particles: string; instancedSubmissions: number; animatedAssets: number; limitations: string[]; warnings: string[] }
+export interface Metrics { frameMs?:number; resolution?:number; fps: number; draws: number; backend: string; triangles: number; errors: string[]; evidence?: RendererEvidence }
