@@ -70,7 +70,7 @@ Audio is validated and limited to **100 MB** per file: MP3 (recommended), WAV, O
 docker compose exec api python manage.py import_songs
 ```
 
-Uploaded files live in the persistent Compose **music_media** volume, mounted read-only by nginx for efficient audio streaming and byte-range seeking. Back up this volume together with PostgreSQL. Do not remove it with `docker compose down -v`. Unpublishing hides a recording from the catalog; previously issued media URLs remain public. The **backend_static** volume contains generated admin/DRF CSS and JavaScript. nginx allows 110 MB requests only on the music/admin routes; configure your outer gateway's upload limit to at least 110 MB too (see `deploy/nginx/ispconfig.md`).
+Uploaded files live in the persistent Compose **music_media** volume, mounted read-only by nginx for efficient audio streaming and byte-range seeking. Back up this volume together with PostgreSQL. Do not remove it with `docker compose down -v`. Unpublishing hides a recording from the catalog; previously issued media URLs remain public. The **backend_static** volume contains generated admin/DRF CSS and JavaScript. nginx allows 110 MB requests only on the music/admin routes; configure your outer gateway's upload limit to at least 110 MB too (see `deploy/nginx/apigateway.md`).
 
 For frontend development against Compose, set `$env:API_PROXY_TARGET='http://localhost:8080'` before `npm.cmd run dev`. This proxies the API, media, admin and static assets through Vite. Use your actual Compose port if it differs, and add the Vite origin to `CSRF_TRUSTED_ORIGINS` when editing music through that origin.
 
