@@ -4,6 +4,12 @@ A cooperative 3D game for **1–8 pilots per squad**, with independent simultane
 
 The browser is a standalone **React + TypeScript + Vite SPA** rendered by **Aura3D 4.0.0**. **Django REST Framework** serves JSON, **Django Channels** serves WebSockets, **Redis** coordinates live worlds, and **PostgreSQL/PostGIS** stores missions, players, snapshots, spatial landmarks and results. **nginx** serves the SPA and proxies the API and WebSockets over HTTP. Django never serves or embeds the frontend.
 
+## Who it's for
+
+- **Players.** RELAY is free to play in a desktop or mobile browser. There is no account, download or payment: open the site, choose a callsign, and launch a squad alone or with up to seven friends.
+- **Developers learning Aura3D.** The full source is free to use, study and adapt under the [MIT License](LICENSE). It is a working multiplayer example of Aura3D scene authoring, materials, instancing, physics, cameras and diagnostics. Start with [What this demonstrates](#what-this-demonstrates) and the in-game **Engine lab**.
+- **A proof of concept for music marketing in games.** RELAY is built to be deployed as a live demonstration of promoting music inside a game. **RELAY RADIO** plays artists' tracks with full credits and links while people play, and new releases reach players without a redeploy. See [Music library and uploads](#music-library-and-uploads).
+
 ## Start
 
 Requires Docker Desktop with the Linux engine running and Docker Compose v2.24 or newer (optional `env_file` support).
@@ -70,7 +76,7 @@ For frontend development against Compose, set `$env:API_PROXY_TARGET='http://loc
 
 ## Anthropic / ORA
 
-Your existing `.env.files/.env.antropic` is loaded **only into the API container**. Both `ANTROPIC_API_KEY` (the spelling in your file) and `ANTHROPIC_API_KEY` work. The file is excluded from Git and Docker build contexts. The key is never sent to the frontend, included in an image, or returned in an API response.
+Set `ANTHROPIC_API_KEY` in `.env` (see `.env.example`) for local runs, or in `.env.prod` for production. The key is passed **only to the API container**. Both files are excluded from Git, and the key is never built into an image, sent to the frontend, or returned in an API response. The key is optional locally: without one, ORA uses local guidance (described below). The production Compose file requires it.
 
 The default model is `claude-sonnet-4-6`. In a network expedition, try:
 
@@ -276,3 +282,57 @@ Playwright captures desktop, mobile, and lab screenshots under `artifacts/`. Bro
 `npm audit` currently reports transitive advisories through Aura3D’s `@loaders.gl/textures → texture-compressor` dependencies (`image-size`, `sprintf-js`), without an upstream compatible fix. The app does not expose the compressor or accept uploaded 3D models; staff-uploaded music covers are validated by Django/Pillow and are never passed through Aura3D. These findings still need tracking when updating Aura3D; they have not been silently overridden. Vite is pinned to a patched 7.3.7. The engine build also warns about unused bundled humanoid/Basis assets and a large lazy Rapier chunk. The app uses its own hashed, uncompressed GLB; those absent optional assets are not required by the current scene.
 
 Sources: [Aura3D repository](https://github.com/auraoneai/aura3d), [Anthropic Messages API](https://platform.claude.com/docs/en/api/messages/create).
+
+## Roadmap and TODO
+
+The full plan, with details for each item, is in [ROADMAP.md](ROADMAP.md). Suggestions are welcome as [GitHub issues](https://github.com/engineermhayden/relay-game-music-marketing/issues).
+
+**Foundations**
+
+- [ ] Optional player accounts (playing stays free and account-free)
+- [ ] In-game feedback and suggestions tool, with a public ideas board
+- [ ] Configurable analytics and a privacy page
+- [ ] Continuous integration: tests, build and secret scanning on every pull request
+- [ ] Support any AI provider for ORA, including self-hosted models, and drop the Anthropic API key requirement
+
+**Community music**
+
+- [ ] Music submissions from account holders, reviewed before they reach RELAY RADIO
+- [ ] Artist profiles and a featured-artist spotlight
+- [ ] Release premieres with an in-world light show
+- [ ] Likes, a RELAY Top 10 chart, and listening stats for artists
+- [ ] Squad listening party: one synced station for the whole squad
+- [ ] A world that pulses to the beat of the current track
+- [ ] Ask ORA for music by mood
+
+**Watch and share**
+
+- [ ] Spectator mode and a **Live now** list of public expeditions
+- [ ] Recorded expeditions for account holders, with replays and MP4 downloads
+- [ ] Highlight clips and a replay photo mode
+- [ ] ORA mission debriefs
+
+**More to play**
+
+- [ ] Daily signal challenge with ghost runs
+- [ ] New destinations: The Sunken Archive and The Drift Belt
+- [ ] Achievements and earned cosmetics
+- [ ] Gamepad support and accessibility options
+
+**For developers**
+
+- [ ] Step-by-step Aura3D tutorials built on RELAY's source
+- [ ] Explore more of Aura3D: WebGPU, navmesh sentinels, skeletal animation, XR
+- [ ] Contributor guide
+
+**Operations**
+
+- [ ] Scale the simulation beyond a single worker
+- [ ] Moderation tools for callsigns, feedback and tracks
+- [ ] Scheduled backups and resolution of the Aura3D `npm audit` advisories
+
+## License
+
+RELAY's source code is released under the [MIT License](LICENSE).
+
+The MIT License does not cover the sample recordings in `marketing/sample-songs/`. They belong to their respective artists and are included only as demo content for the music player. Do not redistribute them without the rights holders' permission. The `ora.glb` model is separately dedicated to the public domain under CC0 1.0 (see `frontend/aura.assets.json`). Third-party dependencies remain under their own licenses.
