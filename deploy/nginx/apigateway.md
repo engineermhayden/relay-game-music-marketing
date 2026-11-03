@@ -1,12 +1,12 @@
-# ISPConfig gateway → Dockerized nginx
+# APIGateway gateway → Dockerized nginx
 
 ```text
-Browser ──HTTPS──▶ ISPConfig nginx (TLS, Let's Encrypt) ──HTTP──▶ 127.0.0.1:8080 (aura-relay nginx) ──▶ api / static SPA
+Browser ──HTTPS──▶ APIGateway nginx (TLS, Let's Encrypt) ──HTTP──▶ 127.0.0.1:8080 (aura-relay nginx) ──▶ api / static SPA
 ```
 
-ISPConfig terminates TLS and forwards everything to the Compose `nginx` service, which already routes `/api/`, `/ws/` and the SPA. The gateway's job is to preserve the public `Host`, report the original scheme in `X-Forwarded-Proto`, and pass WebSocket upgrades through on `/ws/`.
+APIGateway terminates TLS and forwards everything to the Compose `nginx` service, which already routes `/api/`, `/ws/` and the SPA. The gateway's job is to preserve the public `Host`, report the original scheme in `X-Forwarded-Proto`, and pass WebSocket upgrades through on `/ws/`.
 
-Replace `your-domain.com` and the upstream `127.0.0.1:8080` below with your values. If ISPConfig runs on a different machine from Docker, use the Docker host's private IP instead of `127.0.0.1`.
+Replace `your-domain.com` and the upstream `127.0.0.1:8080` below with your values. If APIGateway runs on a different machine from Docker, use the Docker host's private IP instead of `127.0.0.1`.
 
 ## 1. Website settings
 
@@ -17,7 +17,7 @@ Replace `your-domain.com` and the upstream `127.0.0.1:8080` below with your valu
 | Domain | Domain | `your-domain.com` |
 | Domain | Auto-Subdomain | `None` (or `www.`, see [www](#www-subdomain)) |
 | Domain | SSL / Let's Encrypt SSL | ✔ / ✔ |
-| Domain | PHP | `Disabled` (otherwise ISPConfig's `\.php$` location intercepts requests) |
+| Domain | PHP | `Disabled` (otherwise APIGateway's `\.php$` location intercepts requests) |
 | Redirect | Rewrite HTTP to HTTPS | ✔ |
 
 ## 2. nginx Directives
@@ -61,7 +61,7 @@ Why these values:
 - `X-Forwarded-Proto $scheme`: Django uses it (`SECURE_PROXY_SSL_HEADER`) to treat requests as HTTPS for secure cookies and CSRF origin checks. With "Rewrite HTTP to HTTPS" on, it is always `https` by the time a request is proxied.
 - `/ws/` needs its own block because WebSocket upgrades require HTTP/1.1 plus `Upgrade`/`Connection` headers. The inner nginx closes idle sockets at 90s; the gateway timeout is set above that so it is never the limit (the client heartbeats at 10 Hz anyway).
 - `proxy_read_timeout 60s` sits above the inner nginx's 40s `/api/` timeout and the frontend's 35s request timeout, so slow AI replies are cut by the app, not the gateway.
-- ISPConfig's own `^~ /.well-known/acme-challenge/` location still takes precedence over `location /`, so Let's Encrypt renewals keep working.
+- APIGateway's own `^~ /.well-known/acme-challenge/` location still takes precedence over `location /`, so Let's Encrypt renewals keep working.
 
 ## 3. Matching app `.env`
 
@@ -69,17 +69,17 @@ Why these values:
 ALLOWED_HOSTS=your-domain.com,localhost,127.0.0.1
 CSRF_TRUSTED_ORIGINS=https://your-domain.com,http://localhost:8080,http://127.0.0.1:8080
 COOKIE_SECURE=true
-# Same host as ISPConfig: publish only on loopback so the plain-HTTP origin isn't reachable from outside.
+# Same host as APIGateway: publish only on loopback so the plain-HTTP origin isn't reachable from outside.
 HTTP_PORT=127.0.0.1:8080
 ```
 
-Compose publishes `${HTTP_PORT}:80`, so `HTTP_PORT=127.0.0.1:8080` becomes `127.0.0.1:8080:80`. Without it, Docker binds `0.0.0.0:8080` and bypasses host firewalls such as ufw, which exposes an origin that trusts forwarded headers. If ISPConfig is on another machine, keep `HTTP_PORT=8080` and restrict port 8080 to the gateway's IP at the network/provider firewall.
+Compose publishes `${HTTP_PORT}:80`, so `HTTP_PORT=127.0.0.1:8080` becomes `127.0.0.1:8080:80`. Without it, Docker binds `0.0.0.0:8080` and bypasses host firewalls such as ufw, which exposes an origin that trusts forwarded headers. If APIGateway is on another machine, keep `HTTP_PORT=8080` and restrict port 8080 to the gateway's IP at the network/provider firewall.
 
 After changing `.env`: `docker compose up -d`.
 
 ### www subdomain
 
-If the site also answers on `www.`, add `www.your-domain.com` to `ALLOWED_HOSTS` and `https://www.your-domain.com` to `CSRF_TRUSTED_ORIGINS`, or use ISPConfig's SEO Redirect to send `www` to the bare domain.
+If the site also answers on `www.`, add `www.your-domain.com` to `ALLOWED_HOSTS` and `https://www.your-domain.com` to `CSRF_TRUSTED_ORIGINS`, or use APIGateway's SEO Redirect to send `www` to the bare domain.
 
 ## 4. Verify
 
@@ -100,4 +100,4 @@ Then open the site, join a room, and check DevTools → Network → WS: the `/ws
 | Session lost on every reload | `COOKIE_SECURE=true` while the site is reached over plain HTTP |
 | Room never goes live / WS errors | `/ws/` block missing or the `Upgrade`/`Connection` headers dropped |
 | `502 Bad Gateway` | Compose stack down, or the upstream address/port doesn't match `HTTP_PORT` |
-| ISPConfig rejects the directives with `duplicate location "/"` | The vhost template already defines `location /`; put `##merge##` as the first line inside the `location /` block |
+| APIGateway rejects the directives with `duplicate location "/"` | The vhost template already defines `location /`; put `##merge##` as the first line inside the `location /` block |
