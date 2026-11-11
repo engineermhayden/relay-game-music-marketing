@@ -6,7 +6,7 @@ The browser is a standalone **React + TypeScript + Vite SPA** rendered by **Aura
 
 ## Who it's for
 
-- **Players.** RELAY is free to play in a desktop or mobile browser. There is no account, download or payment: open the site, choose a callsign, and launch a squad alone or with up to seven friends.
+- **Players.** RELAY is free to play in a desktop or mobile browser, with nothing to download or pay for. No account is needed: open the site, choose a callsign, and launch a squad alone or with up to seven friends. Players who want one can create an optional email account that keeps track of the pilots they fly. See [Optional player accounts](#optional-player-accounts).
 - **Developers learning Aura3D.** The full source is free to use, study and adapt under the [MIT License](LICENSE). It is a working multiplayer example of Aura3D scene authoring, materials, instancing, physics, cameras and diagnostics. Start with [What this demonstrates](#what-this-demonstrates) and the in-game **Engine lab**.
 - **A proof of concept for music marketing in games.** RELAY is built to be deployed as a live demonstration of promoting music inside a game. **RELAY RADIO** plays artists' tracks with full credits and links while people play, and new releases reach players without a redeploy. See [Music library and uploads](#music-library-and-uploads).
 
@@ -73,6 +73,70 @@ docker compose exec api python manage.py import_songs
 Uploaded files live in the persistent Compose **music_media** volume, mounted read-only by nginx for efficient audio streaming and byte-range seeking. Back up this volume together with PostgreSQL. Do not remove it with `docker compose down -v`. Unpublishing hides a recording from the catalog; previously issued media URLs remain public. The **backend_static** volume contains generated admin/DRF CSS and JavaScript. nginx allows 110 MB requests only on the music/admin routes; configure your outer gateway's upload limit to at least 110 MB too (see `deploy/nginx/apigateway.md`).
 
 For frontend development against Compose, set `$env:API_PROXY_TARGET='http://localhost:8080'` before `npm.cmd run dev`. This proxies the API, media, admin and static assets through Vite. Use your actual Compose port if it differs, and add the Vite origin to `CSRF_TRUSTED_ORIGINS` when editing music through that origin.
+
+## Optional player accounts
+
+Accounts are optional. Guests can play every destination, solo or in a squad, without one. Choose **Sign in** in the top bar to create an account with an email and password, sign in, or reset a forgotten password. Accounts are the foundation for saving expedition results, squad settings and performance data in a later update. For now, an account records which pilots it has flown.
+
+- **Signing up or in never interrupts play.** The browser keeps its callsign and current squad, and that pilot is linked to the account. Pilots created while signed in are linked too (`Pilot.account`).
+- **Signing out** ends the browser's whole session, including its pilot, and leaves the current squad on that device. A shared computer therefore never keeps playing as, or recording for, the previous account. Play continues as a guest.
+- **Email verification.** Sign-up sends a verification link that is valid for 72 hours. You can play before verifying. **Resend verification email** sends up to three emails per hour. The link also works in a different browser or device.
+- **Password reset.** **Forgot password?** emails a single-use link that expires after one hour. The response is the same whether or not the email has an account. Choosing a new password signs you in, confirms the email address, and signs out your other sessions.
+- **Changing the email or password.** Choose **Change email or password** in the account dialog and enter your current password. The dialog checks the request first. It then warns that the change signs you out on every device, including this one, which also leaves your current squad on each device. **Cancel** keeps the dialog open and changes nothing.
+  - *Password only:* you are signed out everywhere and sign in again with the new password.
+  - *Email, or email and password:* first you see your eight recovery keys and must confirm you have stored them. If you close the dialog or cancel at that step, nothing changes, and the next attempt shows the same keys. After you confirm, you are signed out everywhere, the email changes, and the account is **deactivated** until you open the activation link sent to the new address. The previous address is told about the change. Signing in before activation (with the correct password) explains this and offers **Send a new activation link**. A password reset sent to the new address also reactivates the account.
+- **Recovery keys.** Eight single-use 12-digit keys (`1234-5678-9012`). **Copy** and **Download** help you store them. **Regenerate recovery keys** (current password required) replaces all eight; the old keys stop working immediately. The account dialog shows how many remain unused. To use one, choose **Sign in → Use a recovery key**. Enter the account email, or the email it had before a change, plus an unused key and a new password. You are signed in, and every other session is signed out. If an email change is still waiting for activation (for example a mistyped address), recovery restores the previous email. Used keys never work again.
+- **Downloading your data.** **Download my data** in the account dialog asks for your current password, then saves `relay-account-data-<date>.json`. The file holds your email (and the previous one, after a change), when the account was created and last signed in, and how many recovery keys remain unused. It also lists your pilots and callsigns, the squads they created or joined, the ORA journal of those squads, and the prompts you wrote to ORA. It leaves out your password, your recovery keys, and other players' callsigns and prompts. Wrong passwords count toward the sign-in lockout. Downloading changes nothing and keeps you in your squad.
+
+- **Deleting your account.** **Delete account** at the bottom of the account dialog asks for your current password and confirmation. It is a *soft delete*. RELAY keeps the account row and its gameplay history (pilots, expeditions, memberships, positions, scores and mission events) for gameplay analytics. Everything that identifies the player is erased:
+  - **Replaced with random text:** the email address (`<64 hex>@deleted.invalid`; the `.invalid` domain can never receive mail) and the username. Also every callsign the account flew, wherever it appears: pilot records, room snapshots, live room state, event text, ORA replies and squadmates' ORA prompts.
+  - **Replaced with random text:** names of squads the account created.
+  - **Removed:** the password (made unusable), the previous email, recovery keys, and the ORA prompts the player wrote.
+  - **Marked:** `deletion_reason = 'user-self-deletion'` with a `deleted_at` timestamp. That row is the audit record.
+
+  The account is deactivated and every session is signed out. This browser leaves its squad and forgets the saved callsign. A final confirmation goes to the former address, which is then no longer stored anywhere. The same email can register a new, unrelated account. If Redis is unreachable, deletion fails without changing anything, so live rooms never keep a name the database no longer has.
+
+Without `EMAIL_HOST`, emails are printed to the API log instead of being sent. Copy the link from there:
+
+```powershell
+docker compose logs api | Select-String 'account='
+```
+
+To send real email, set your SMTP provider's settings in `.env` (or `.env.prod`), then `docker compose up -d api`:
+
+```dotenv
+PUBLIC_SITE_URL=https://relay.example.com
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=relay@example.com
+EMAIL_HOST_PASSWORD=your-smtp-password
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL="RELAY <no-reply@relay.example.com>"
+```
+
+`PUBLIC_SITE_URL` is the origin used in emailed links. When it is blank, links use the request's host, which `ALLOWED_HOSTS` restricts. For implicit TLS on port 465, set `EMAIL_USE_TLS=false` and `EMAIL_USE_SSL=true`. `compose.prod.yaml` requires every setting except the SMTP username and password, which may be empty for unauthenticated relays.
+
+Security details:
+
+- Passwords are hashed with Django's default PBKDF2 hasher. They must be 8–128 characters and not common, entirely numeric, or too similar to the email. These validators now also apply to staff `createsuperuser` and `changepassword`.
+- Emails are unique regardless of case. Sign-up says so when an address is already registered; sign-in errors do not reveal which emails exist.
+- Links carry their tokens in the URL fragment (`/#account=…`). Browsers never send fragments to the server, nginx logs, or `Referer` headers, and the app removes the fragment from the address bar.
+- **CAPTCHA.** Sign-up, sign-in and password-reset requests require a self-hosted image CAPTCHA: five distorted characters from an alphabet without lookalikes (no 0/O/Q or 1/I/L), answered without regard to case or spaces. There is no third-party service and no new dependency. Images are drawn with Pillow, and each challenge lives in Redis for at most 10 minutes, stored only as a keyed hash of its answer.
+  - Every challenge works once. Any submission spends it, right or wrong, so the form shows a new image after every attempt. A page load always starts with a new one, and **Show a new image** replaces it at any time.
+  - The CAPTCHA is checked before anything else, so bots cannot create accounts, trigger emails, make the server hash passwords, or add to a player's sign-in lockout without solving it.
+  - Each network address can request 60 images per 10 minutes.
+  - An account awaiting activation gets a 15-minute signed token from its CAPTCHA-protected sign-in, which it uses to request a new activation link. The resend endpoint never accepts passwords, so it cannot be used to guess them around the CAPTCHA.
+  - Limits: like any text CAPTCHA, it deters automated abuse but will not stop a determined attacker using modern OCR or paid human solvers; the rate limits below remain the backstop. There is no audio alternative yet, which matters for players who cannot see the image.
+- Sign-in is locked for 15 minutes after 10 wrong passwords for one email, or 50 from one network address. A password reset lifts the email lock. One network address can create 20 accounts per hour, and each address receives at most three verification or reset emails per hour. The counters live in Redis.
+- Email changes, password changes and viewing or regenerating recovery keys all require the current password. Wrong current passwords count toward the sign-in lockout. Recovery attempts are limited separately, to 10 failures per email (and 50 per network address) every 15 minutes.
+- Signing out everywhere is enforced on every request, game endpoints included. Reactivating an account does not revive earlier sessions.
+- Recovery keys are not stored. Each is derived with an HMAC of `DJANGO_SECRET_KEY`, the account, and a random per-set value kept in the database. This is how the same keys can be shown again without storing them in plain text, and why a database copy alone reveals none. **Changing `DJANGO_SECRET_KEY` changes every recovery key**, so players must then regenerate theirs. Keys never appear in emails or logs.
+- While an email change awaits activation, the previous address stays reserved, so recovery can always restore it.
+- Account deletion covers data RELAY stores. It does not reach server, gateway or SMTP-provider logs (which may hold IP addresses or addresses of sent mail), emails printed by the console backend, or database and volume backups taken before the deletion. Cover those with retention policies. Guest play in a browser where the player never signed in is not linked to the account, so it cannot be identified or erased. Retained gameplay stays linked by a random account ID. With identifiers erased it is intended to be anonymous, but whether it counts as anonymised under GDPR depends on what else you hold, such as access logs. Review that with your compliance advisor.
+- Player accounts are never staff. They cannot open the admin or upload music. Staff logins are separate: a staff user cannot sign in to the game with that login, and may create a player account with the same email.
+
+Staff can review accounts at **/admin/accounts/account/**. The email is read-only there, because it is the sign-in and reset address. The admin shows whether an account awaits activation and how many recovery keys remain, never the keys themselves. Players delete their own accounts as described above. Deleting a user under **Authentication and Authorization → Users** is a hard delete. It removes the account, but leaves its pilots, with their callsigns, unlinked in gameplay records, so prefer self-service deletion. A staff-initiated erasure action, for requests received by email, is not yet available. An account a staff member deactivates (by clearing **Active** on its user) stays deactivated: activation links, password resets and recovery keys do not reactivate it.
 
 ## Anthropic / ORA
 
@@ -200,13 +264,16 @@ HTTP_PORT=8080
 ALLOWED_HOSTS=relay.example.com,localhost,127.0.0.1
 CSRF_TRUSTED_ORIGINS=https://relay.example.com,http://localhost:8080,http://127.0.0.1:8080
 COOKIE_SECURE=true
+PUBLIC_SITE_URL=https://relay.example.com
 ```
+
+`compose.prod.yaml` also requires the email settings described in [Optional player accounts](#optional-player-accounts). Existing deployments must add them to `.env.prod` before upgrading. Rebuild the API and nginx (`docker compose --env-file .env.prod -f compose.prod.yaml up -d --build api nginx`). The API applies the account migrations at startup.
 
 Point your gateway at `http://<docker-host>:8080` with the original path. Preserve the public `Host`, set `X-Forwarded-Proto: https`, forward WebSocket `Upgrade` and `Connection` headers, and allow `/ws/` connections for at least 90 seconds. The SPA, API and WebSockets share the same public origin; no CORS setup is needed. Use a dedicated hostname or mount at `/` (subpath hosting is not configured).
 
 nginx listens on **port 80 only** inside its container. There are no SSL certificates, HTTPS redirects, or TLS listeners in this project. Only nginx publishes a host port; the database, Redis and API stay on the Compose network. Restrict direct access to the origin to your gateway in deployment, because forwarded headers are trusted. `COOKIE_SECURE=true` is for the HTTPS gateway URL; local HTTP testing needs it false.
 
-For LAN testing, add the host’s LAN IP to `ALLOWED_HOSTS` and `http://<LAN-IP>:8080` to `CSRF_TRUSTED_ORIGINS`. Recreate the API with `docker compose up -d api`. Forwarded IP handling and public access controls can be enforced by your gateway. This showcase uses guest pilot sessions and invitation codes, not account passwords or ranked-game anti-cheat.
+For LAN testing, add the host’s LAN IP to `ALLOWED_HOSTS` and `http://<LAN-IP>:8080` to `CSRF_TRUSTED_ORIGINS`. Recreate the API with `docker compose up -d api`. Forwarded IP handling and public access controls can be enforced by your gateway. This showcase uses guest pilot sessions and invitation codes, with optional player accounts; it has no ranked-game anti-cheat.
 
 ## Architecture and persistence
 
@@ -217,7 +284,7 @@ Browser: React + TypeScript + Aura3D
 API Gateway (your TLS) → nginx :80
                          ├── built SPA files
                          └── Django ASGI :8000 (2 API workers)
-                               ├── PostGIS: pilots, rooms, landmarks, snapshots, AI journal
+                               ├── PostGIS: pilots, accounts, rooms, landmarks, snapshots, AI journal
                                ├── Redis: room state, locks, channels, budgets
                                └── Anthropic Messages API (server-side)
                              Simulation worker → 10 Hz updates → Channels → browsers
@@ -232,7 +299,19 @@ The spatial coordinates are fictional world meters stored as planar PostGIS poin
 | Route | Purpose |
 | --- | --- |
 | `GET /api/health/` | Check PostgreSQL/PostGIS and Redis |
-| `GET/POST /api/session/` | CSRF bootstrap; create/update guest callsign |
+| `GET/POST /api/session/` | CSRF bootstrap; create/update guest callsign; current account |
+| `GET /api/account/` | Current player account (or `null`) and CSRF token |
+| `GET /api/account/captcha/` | New single-use CAPTCHA: `captcha_id`, PNG data-URL `image`, `expires_in` |
+| `POST /api/account/signup/` / `login/` / `logout/` | Optional account: `email`, `password`; sign-up and sign-in also need `captcha_id` and `captcha_answer` |
+| `POST /api/account/verify-email/` | Confirm an email address: `token` |
+| `POST /api/account/verify-email/resend/` | Send a new verification link (signed in, or the `resend_token` a sign-in returns while awaiting activation) |
+| `POST /api/account/password-reset/` | Email a reset link: `email`, `captcha_id`, `captcha_answer` |
+| `POST /api/account/password-reset/confirm/` | Set a new password: `uid`, `token`, `password` |
+| `POST /api/account/recovery-keys/` | Show (creating if needed) the recovery keys: `password`; `regenerate: true` replaces them |
+| `POST /api/account/change/` | Change `new_email` and/or `new_password` with `current_password`; `validate_only: true` checks only. An email change also needs `keys_confirmed: true` and the `recovery_set` shown. Signs out everywhere |
+| `POST /api/account/recover/` | Recover with `email` (current or previous), an unused recovery `key` and a new `password` |
+| `POST /api/account/export/` | Download the account's data as a JSON file: `password`. Returns an attachment marked `Cache-Control: no-store` |
+| `POST /api/account/delete/` | Self-service soft deletion: `password`, `confirm: true`. Scrambles personal data, keeps gameplay history, signs out everywhere |
 | `GET/POST /api/rooms/` | Public active rooms; create a squad (`level`: verdant/ember/glacier/tempest) |
 | `POST /api/rooms/join/` | Join by six-character code |
 | `GET /api/rooms/{code}/` | Member-only state and AI journal |
@@ -256,7 +335,7 @@ python -m unittest discover -s backend/tests -v
 # Real PostGIS/Redis integration and schema checks:
 docker compose exec api python manage.py check
 docker compose exec api python manage.py makemigrations --check --dry-run
-docker compose exec api python manage.py test game music --noinput -v 2
+docker compose exec api python manage.py test game music accounts --noinput -v 2
 
 # Frontend build:
 cd frontend
@@ -269,13 +348,13 @@ $env:NETWORK_TESTS='1'
 npm.cmd run test:e2e
 ```
 
-Music coverage includes real browser playback, all repeat modes, personal ordering and preferences, new releases, keyboard isolation, and MP3 streaming during live gameplay. To verify an actual staff upload through nginx (creates and removes a temporary account, song and cover):
+The account tests need the CAPTCHA's test answer. Set `CAPTCHA_TEST_MODE=true` in `.env`, run `docker compose up -d api`, and set it back to `false` afterwards. The CAPTCHA test itself still checks that images change on request, after a wrong answer, after a failed sign-in and on reload. Account coverage signs up in the middle of a live squad, verifies from a second browser, signs out, resets the password and signs in again. A second test changes the password (including cancelling at the warning), abandons and then completes an email change behind the same recovery keys, reactivates, undoes a mistyped email with a recovery key, and regenerates keys. A third deletes an account mid-squad and checks the browser, squad, expedition and email. A fourth downloads an account's data mid-squad and checks the file's contents. The backend deletion tests dump the entire database and live Redis state to prove no email, callsign or prompt text survives. Emails are read from `docker compose logs api`, so leave `EMAIL_HOST` blank for that test. Music coverage includes real browser playback, all repeat modes, personal ordering and preferences, new releases, keyboard isolation, and MP3 streaming during live gameplay. To verify an actual staff upload through nginx (creates and removes a temporary account, song and cover):
 
 ```powershell
 Get-Content -Raw scripts/smoke_music.py | docker compose exec -T api python -
 ```
 
-For frontend-only work, run `npm.cmd run dev` in `frontend`, then open `http://localhost:5173`. It starts in local preview if no API is reachable. Vite proxies to a locally running backend on port 8000 by default; production Compose does not expose that port. To use the Docker API and nginx media serving during frontend development, set `$env:API_PROXY_TARGET='http://localhost:8080'` and include the dev origin in `CSRF_TRUSTED_ORIGINS`.
+For frontend-only work, run `npm.cmd run dev` in `frontend`, then open `http://localhost:5173`. It starts in local preview if no API is reachable. Vite proxies to a locally running backend on port 8000 by default; production Compose does not expose that port. To use the Docker API and nginx media serving during frontend development, set `$env:API_PROXY_TARGET='http://localhost:8080'` and include the dev origin in `CSRF_TRUSTED_ORIGINS`. The Vite proxy rewrites the `Host` header, so also set `PUBLIC_SITE_URL=http://localhost:5173` to make emailed account links open the dev server.
 
 Playwright captures desktop, mobile, and lab screenshots under `artifacts/`. Browser tests cover every destination, WASD/arrows, clean scene switching, native physics, mobile layout, focus-loss stopping, socket reconnection, session resume, shared movement, room isolation and unauthorized access rejection. Four separate squads also complete all four missions concurrently using only real WebSocket movement/interact messages; no positions or resources are injected into the server. Pure rule tests cover pulsing heat, frost speed, ordered relays, rescue and solo completion. API tests verify destination validation and PostGIS recovery. Integration tests mock/disable paid AI; the live credential check is separate and opt-in.
 
@@ -289,7 +368,7 @@ The full plan, with details for each item, is in [ROADMAP.md](ROADMAP.md). Sugge
 
 **Foundations**
 
-- [ ] Optional player accounts (playing stays free and account-free)
+- [x] Optional player accounts (playing stays free and account-free). See [Optional player accounts](#optional-player-accounts)
 - [ ] In-game feedback and suggestions tool, with a public ideas board
 - [ ] Configurable analytics and a privacy page
 - [ ] Continuous integration: tests, build and secret scanning on every pull request

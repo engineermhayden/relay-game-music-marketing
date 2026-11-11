@@ -12,6 +12,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError, Throttl
 from rest_framework.response import Response
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from accounts.services import account_payload, current_account
 from .models import Pilot, Room, Membership, Landmark, MissionEvent
 from .simulation import add_player, new_world, public_state, event
 from .state import locked_room, persist, snapshot, store
@@ -64,10 +65,10 @@ def session_view(request):
             p.name = name.strip()
             p.save(update_fields=['name'])
         else:
-            p = Pilot.objects.create(name=name.strip())
+            p = Pilot.objects.create(name=name.strip(), account=current_account(request))
             request.session.cycle_key()
             request.session['pilot_id'] = str(p.id)
-    return Response({'pilot': {'id': str(p.id), 'name': p.name} if p else None, 'csrf': get_token(request), 'ai': {'configured': bool(settings.ANTHROPIC_API_KEY), 'model': settings.ANTHROPIC_MODEL, 'daily_limit': settings.AI_DAILY_REQUEST_LIMIT}})
+    return Response({'pilot': {'id': str(p.id), 'name': p.name} if p else None, 'account': account_payload(current_account(request)), 'csrf': get_token(request), 'ai': {'configured': bool(settings.ANTHROPIC_API_KEY), 'model': settings.ANTHROPIC_MODEL, 'daily_limit': settings.AI_DAILY_REQUEST_LIMIT}})
 
 @api_view(['GET', 'POST'])
 def rooms(request):
@@ -155,7 +156,7 @@ def ai_director(request, code):
             event(state, 'ai', plan['message'])
             persist(room.code, state)
             result = public_state(state)
-        MissionEvent.objects.create(room=room, kind='ai', message=plan['message'], data={'prompt': prompt, 'source': plan['source'], 'pilot': p.name})
+        MissionEvent.objects.create(room=room, kind='ai', message=plan['message'], data={'prompt': prompt, 'source': plan['source'], 'pilot': p.name, 'pilot_id': str(p.id)})
         async_to_sync(get_channel_layer().group_send)(f'expedition.{room.code}', {'type': 'world.state', 'state': result})
         return Response(plan)
     finally:

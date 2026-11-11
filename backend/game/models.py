@@ -8,6 +8,9 @@ def room_code():
 class Pilot(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=24)
+    # Set when a signed-in player creates or brings this guest pilot to their account.
+    # Results and settings can be attributed to accounts through their pilots.
+    account = models.ForeignKey('accounts.Account', null=True, blank=True, on_delete=models.SET_NULL, related_name='pilots')
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Room(models.Model):
