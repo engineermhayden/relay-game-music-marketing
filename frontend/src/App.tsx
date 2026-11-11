@@ -1,8 +1,10 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
-import { Activity, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, AudioLines, Bot, Check, ChevronRight, CircleHelp, Compass, Copy, Cpu, Crosshair, FlaskConical, Globe2, Layers3, LoaderCircle, MapPin, Maximize2, Moon, Radio, RotateCcw, Send, Shield, Sparkles, Sun, Trophy, Users, Volume2, VolumeX, Waves, X, Zap, Camera, ZoomIn, ZoomOut } from 'lucide-react';
+import { Activity, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, AudioLines, Bot, Check, ChevronRight, CircleHelp, Compass, Copy, Cpu, Crosshair, FlaskConical, Globe2, Layers3, LoaderCircle, MapPin, Maximize2, Moon, Radio, RotateCcw, Send, Shield, Sparkles, Sun, Trophy, UserRound, Users, Volume2, VolumeX, Waves, X, Zap, Camera, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { api, setCsrf } from './api';
+
+import { AccountPanel, takeAccountLink, type AccountLink } from './AccountPanel';
 
 import { previewAction, previewWorld, stepPreview } from './preview';
 
@@ -83,7 +85,10 @@ export function App(){
 
   const [options,setOptions]=useState(initialOptions),[metrics,setMetrics]=useState<Metrics>({fps:0,draws:0,backend:'initializing',triangles:0,errors:[]});
 
-  const [modal,setModal]=useState<'launch'|'join'|'help'|'capabilities'|'scores'|null>(null),[name,setName]=useState(localStorage.getItem('relay:name')||'Explorer'),[squadName,setSquadName]=useState('The first signal'),[privateRoom,setPrivateRoom]=useState(false),[joinCode,setJoinCode]=useState(new URLSearchParams(location.search).get('room')||'');
+  // Verification and reset links arrive in the URL fragment; read them once and open the account dialog.
+  const [accountLink,setAccountLink]=useState<AccountLink|null>(takeAccountLink),[accountKey,setAccountKey]=useState(0);
+
+  const [modal,setModal]=useState<'launch'|'join'|'help'|'capabilities'|'scores'|'account'|null>(accountLink?'account':null),[name,setName]=useState(localStorage.getItem('relay:name')||'Explorer'),[squadName,setSquadName]=useState('The first signal'),[privateRoom,setPrivateRoom]=useState(false),[joinCode,setJoinCode]=useState(new URLSearchParams(location.search).get('room')||'');
 
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[renderError,setRenderError]=useState(''),[aiBusy,setAiBusy]=useState(false),[prompt,setPrompt]=useState(''),[sound,setSound]=useState(false);
 
@@ -120,11 +125,17 @@ export function App(){
 
     void api<Room[]>('rooms/').then(setRooms).catch(()=>{});
 
-    if(joinCode)setModal('join');
+    if(joinCode&&!accountLink)setModal('join');
 
     return()=>{soundscape.current.dispose();};
 
   },[]);
+
+  useEffect(()=>{if(modal!=='account')setAccountLink(null);},[modal]);
+
+  // A link pasted into an already-open tab only changes the fragment.
+
+  useEffect(()=>{const onHash=()=>{const link=takeAccountLink();if(link){setAccountLink(link);setAccountKey(k=>k+1);setModal('account');}};window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
 
   useEffect(()=>{if(!apiReady)return;const id=setInterval(()=>void api<Room[]>('rooms/').then(setRooms).catch(()=>{}),15000);return()=>clearInterval(id);},[apiReady]);
 
@@ -226,6 +237,16 @@ export function App(){
 
   }
 
+  async function accountChanged(){
+
+    const s=await api<Session>('session/');setSession(s);setCsrf(s.csrf);setApiReady(true);
+
+    // Signing out (or into a different account) ends the pilot session, and with it this browser's squad membership.
+
+    if(room&&s.pilot?.id!==session?.pilot?.id){setRoom(null);setConnected(false);localStorage.removeItem('relay:room');keys.current.clear();updateWorld(previewWorld(level.id));setNearby(null);notify('You left the squad on this device. Exploring in local preview.');}
+
+  }
+
   async function ask(text=prompt){
 
     if(!text.trim()||aiBusy)return;setPrompt('');setAiBusy(true);
@@ -266,7 +287,7 @@ export function App(){
 
     <div className="workspace">
 
-      <header className="topbar"><div className="wordmark">RELAY<span>AN AURA3D EXPEDITION</span></div><nav className="top-tabs"><button className={!options.lab?'selected':''} onClick={()=>option('lab',false)}>Mission control</button><button className={options.lab?'selected':''} onClick={()=>option('lab',true)}>Engine lab <span>LAB</span></button></nav><div className="top-actions"><span className={`connection ${connected?'live':''}`}><i/>{room?(connected?`${latency} ms · connected`:'Reconnecting…'):'Local preview'}</span><button className="button small" onClick={()=>openModal('launch')}><Users size={15}/> Launch squad <ArrowUpRight size={15}/></button></div></header>
+      <header className="topbar"><div className="wordmark">RELAY<span>AN AURA3D EXPEDITION</span></div><nav className="top-tabs"><button className={!options.lab?'selected':''} onClick={()=>option('lab',false)}>Mission control</button><button className={options.lab?'selected':''} onClick={()=>option('lab',true)}>Engine lab <span>LAB</span></button></nav><div className="top-actions"><span className={`connection ${connected?'live':''}`}><i/>{room?(connected?`${latency} ms · connected`:'Reconnecting…'):'Local preview'}</span><button className={`account-button ${session?.account?'signed-in':''}`} onClick={()=>openModal('account')} title={session?.account?`${session.account.email}${session.account.email_verified?'':' · email not verified'}`:'Sign in or create an optional account'} aria-label={session?.account?`Account: ${session.account.email}${session.account.email_verified?'':', email not verified'}`:'Sign in'}><UserRound size={15}/><span>{session?.account?session.account.email:'Sign in'}</span>{session?.account&&!session.account.email_verified&&<i className="unverified-dot"/>}</button><button className="button small" onClick={()=>openModal('launch')}><Users size={15}/> Launch squad <ArrowUpRight size={15}/></button></div></header>
 
       <main>
 
@@ -340,6 +361,8 @@ export function App(){
     {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null);}}><section className={`modal ${modal==='capabilities'?'wide':''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title"><button className="modal-close" aria-label="Close dialog" onClick={()=>setModal(null)}><X size={20}/></button>
 
       {(modal==='launch'||modal==='join')&&<><span className="eyebrow">MAKE CONTACT</span><h2 id="modal-title">{modal==='launch'?'Your expedition begins here.':'Find your people.'}</h2><p>One to eight pilots. Four destinations. One shared mission.</p><form onSubmit={e=>{e.preventDefault();void launch(modal==='join');}}><label>Pilot callsign<input autoFocus value={name} onChange={e=>setName(e.target.value)} maxLength={24} required/></label>{modal==='launch'?<><label>Squad name<input value={squadName} onChange={e=>setSquadName(e.target.value)} maxLength={48} required/></label><label>Destination<select aria-label="Destination" value={selectedLevel} onChange={e=>setSelectedLevel(e.target.value)}>{levels.map(l=><option value={l.id} key={l.id}>{l.name} · {l.difficulty} · {l.duration/60} min</option>)}</select></label><p className="destination-hint">{levels.find(l=>l.id===selectedLevel)?.rule}</p><label className="check-label"><input type="checkbox" checked={privateRoom} onChange={e=>setPrivateRoom(e.target.checked)}/> Invite-only expedition</label></>:<label>Squad code<input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="ABC234" minLength={6} maxLength={6} required/></label>}{error&&<p className="form-error" role="alert">{error}</p>}<button className="button full" disabled={busy}>{busy?<LoaderCircle className="spin" size={17}/>:<Radio size={17}/>} {busy?'Establishing uplink…':modal==='launch'?'Launch expedition':'Join expedition'}</button></form>{modal==='join'&&<div className="room-list"><div className="section-label">OPEN EXPEDITIONS</div>{rooms.length?rooms.map(r=><button key={r.code} onClick={()=>setJoinCode(r.code)}><span>{r.name}<small>{r.code} · {levelFor(r).name}</small></span><span>{r.players}/8 <ChevronRight size={14}/></span></button>):<p>No public squads yet. Be the first to launch one.</p>}<button className="text-button" onClick={()=>setModal('launch')}>Create a new squad <ArrowUpRight size={14}/></button></div>}{!apiReady&&<div className="connection-note">Network play needs the Docker services. Run <code>docker compose up --build -d</code>, then launch your squad here. The 3D preview works independently.</div>}</>}
+
+      {modal==='account'&&<AccountPanel key={accountKey} account={session?.account??null} link={accountLink} inSquad={!!room} onChanged={accountChanged} onDeleted={()=>{localStorage.removeItem('relay:name');localStorage.removeItem('relay:room');setName('Explorer');}} onClose={()=>setModal(null)}/>}
 
       {modal==='help'&&<><span className="eyebrow">FIELD MANUAL</span><h2 id="modal-title">A small hello.<br/>A very big universe.</h2><p>Explore alone or invite up to seven friends. Each squad has an independent, server-authoritative world.</p><ol className="manual"><li><strong>Look around.</strong> Left-drag to orbit, right-drag or Shift-drag to pan, and scroll to zoom. On touchscreens, drag with one finger or pan and pinch with two. Use the zoom buttons or Reset view at any time. Camera controls also work in follow mode.</li><li><strong>Recover fragments.</strong> Move with WASD or the arrow keys. Press E near a glowing crystal. Shift sprints; Q reveals a survey pulse.</li><li><strong>Restore the relays.</strong> Your squad shares energy. Stand at a spire and press E to install one cell. Each spire requires three.</li><li><strong>Stay out of trouble.</strong> Amber sentinels drain your shield. Your shield recovers away from danger. ORA rescues depleted pilots to the pad.</li><li><strong>Make first contact.</strong> Once all three relays are online, return to the center pad and press E before your destination's signal window ends. Tempest Circuit requires relays in order; watch the field conditions for heat and frost hazards.</li><li><strong>Talk to the world.</strong> Ask ORA for tactics, lore, a storm, or to scout a relay. Claude controls bounded world settings shared by your squad.</li></ol><button className="button full" onClick={()=>setModal(null)}>Ready to explore <ArrowUpRight size={16}/></button></>}
 

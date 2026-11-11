@@ -1,0 +1,10 @@
+{% autoescape off %}Your RELAY account email was changed to {{ email }}.
+
+Confirm this address to reactivate your account:
+
+{{ link }}
+
+Until you do, the account stays deactivated and you cannot sign in. The link expires in {{ hours }} hours. You can still play as a guest.
+
+If you did not make this change, do not open the link. Sign in to RELAY with one of your recovery keys instead (Sign in > Use a recovery key).
+{% endautoescape %}

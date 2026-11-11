@@ -13,7 +13,7 @@ These apply to every feature on this list:
 - **Playing stays free, with no account.** An account unlocks creating and keeping things, such as submitting music or saving recordings. It is never required to play, join a squad or watch.
 - **Artists stay credited and in control.** Every track shows its credits wherever it plays. No music is published without review and the artist's permission, and artists can withdraw their music at any time.
 - **The server stays in charge.** Spectators, replays and AI features read the authoritative simulation. They cannot move pilots or change scores.
-- **Collect as little data as possible.** Players are told what is collected and why, and account holders can export or delete their data.
+- **Collect as little data as possible.** Players are told what is collected and why, and account holders can export their data or delete their account, which erases everything that identifies them.
 - **Every feature is a learning example.** New systems are documented so developers can see how they are built with Aura3D, Django and Channels.
 
 ## Phase 1: Foundations
@@ -24,7 +24,7 @@ Guests keep playing exactly as they do today. An account adds a profile that unl
 
 - Sign up with email and password, with email verification and password reset.
 - Converting a guest session into an account keeps the current callsign and squad.
-- Account holders can download their data, or delete their account and everything tied to it.
+- Account holders can download their data or delete their account. Deletion erases everything that identifies the player: email address, callsigns, names of squads they created, recovery keys and ORA prompts. Anonymized gameplay history (pilots, expeditions, scores and mission events) is kept for analytics.
 - Builds on the existing guest pilot sessions and Django's built-in authentication.
 
 ### Feedback and suggestions tool
