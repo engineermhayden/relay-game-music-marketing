@@ -1,0 +1,17 @@
+.github
+.env
+.env.prod
+.env.files/
+.reference/
+node_modules/
+dist/
+__pycache__/
+.venv/
+*.pyc
+test-results/
+playwright-report/
+artifacts/
+postgres_data/
+redis_data/
+backend/media/
+backend/staticfiles/

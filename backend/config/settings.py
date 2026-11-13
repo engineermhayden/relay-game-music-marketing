@@ -3,6 +3,8 @@ import re
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
+from .env import env_emails, env_int, env_list
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'local-development-only-change-before-public-deployment')
 DEBUG = False
@@ -11,7 +13,7 @@ ADMIN_URL = os.getenv('DJANGO_ADMIN_URL', 'admin/').strip('/')
 if not re.fullmatch(r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', ADMIN_URL) or ADMIN_URL.split('/')[0] in {'api', 'api-auth', 'ws', 'media', 'static', 'assets', 'healthz'}:
     raise ImproperlyConfigured('DJANGO_ADMIN_URL must be a nonempty URL path using letters, numbers, hyphens, underscores and slashes, outside the API/static/media routes.')
 ADMIN_URL += '/'
-INSTALLED_APPS = ['django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'django.contrib.gis', 'rest_framework', 'channels', 'accounts', 'game', 'music']
+INSTALLED_APPS = ['django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'django.contrib.gis', 'rest_framework', 'channels', 'accounts', 'game', 'music', 'feedback']
 MIDDLEWARE = ['django.middleware.security.SecurityMiddleware', 'django.contrib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware', 'accounts.middleware.AccountSessionMiddleware', 'django.contrib.messages.middleware.MessageMiddleware']
 TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'APP_DIRS': True, 'OPTIONS': {'context_processors': ['django.template.context_processors.request', 'django.contrib.auth.context_processors.auth', 'django.contrib.messages.context_processors.messages']}}]
 STATIC_URL = '/static/'
@@ -56,9 +58,22 @@ ACCOUNT_LOGIN_FAILURES_PER_IP = 50
 ACCOUNT_LOGIN_FAILURES_PER_EMAIL = 10
 ACCOUNT_RESETS_PER_IP_HOUR = 20
 ACCOUNT_EMAILS_PER_ADDRESS_HOUR = 3
-# Self-hosted CAPTCHA on sign-up, sign-in and password-reset requests (accounts/captcha.py).
+# Self-hosted CAPTCHA on sign-up, sign-in, password-reset and feedback requests (accounts/captcha.py).
 ACCOUNT_CAPTCHA_TTL = 10 * 60
 ACCOUNT_CAPTCHAS_PER_IP = 60  # New images per 10 minutes.
+# Player feedback (feedback app). Every submission needs a CAPTCHA, and so does voting (once per
+# session per FEEDBACK_VOTER_CHECK_HOURS). Limits come from the environment (.env); see .env.example.
+FEEDBACK_SUBMISSION_COOLDOWN_SECONDS = env_int('FEEDBACK_SUBMISSION_COOLDOWN_SECONDS', 60, minimum=0)  # Between posts; 0 turns it off.
+FEEDBACK_SUBMISSIONS_PER_IP_HOUR = env_int('FEEDBACK_SUBMISSIONS_PER_IP_HOUR', 10)
+FEEDBACK_SUBMISSIONS_PER_SUBMITTER_DAY = env_int('FEEDBACK_SUBMISSIONS_PER_SUBMITTER_DAY', 5)  # Per account, or per guest browser session.
+FEEDBACK_VOTES_PER_IP_HOUR = env_int('FEEDBACK_VOTES_PER_IP_HOUR', 300)  # Vote and unvote requests.
+FEEDBACK_VOTES_PER_IDEA_PER_IP_DAY = env_int('FEEDBACK_VOTES_PER_IDEA_PER_IP_DAY', 5)  # New upvotes on one idea from one network.
+FEEDBACK_VERIFIED_VOTER_TTL = env_int('FEEDBACK_VOTER_CHECK_HOURS', 24) * 60 * 60  # How long a solved CAPTCHA lets a session vote.
+# Spam filter (feedback/spam.py): links allowed in the details (never in titles), and blocked words or phrases.
+FEEDBACK_MAX_LINKS = env_int('FEEDBACK_MAX_LINKS', 2, minimum=0)
+FEEDBACK_BLOCKED_WORDS = env_list('FEEDBACK_BLOCKED_WORDS')
+# Addresses emailed about every new feedback submission, so none is missed. Blank sends none.
+STAFF_EMAILS = env_emails('STAFF_EMAILS')
 # End-to-end tests only: also accept the answer PASSED. Never enable on a public site.
 ACCOUNT_CAPTCHA_TEST_MODE = os.getenv('CAPTCHA_TEST_MODE', 'false').lower() == 'true'
 if ACCOUNT_CAPTCHA_TEST_MODE and SESSION_COOKIE_SECURE:

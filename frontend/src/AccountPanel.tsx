@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, BadgeCheck, ClipboardCopy, Download, KeyRound, LifeBuoy, LoaderCircle, LogIn, LogOut, Mail, MailWarning, RefreshCw, ShieldAlert, Trash2, UserPen, UserRound } from 'lucide-react';
+import { ArrowUpRight, BadgeCheck, ClipboardCopy, Download, KeyRound, LifeBuoy, LoaderCircle, LogIn, LogOut, Mail, MailWarning, ShieldAlert, Trash2, UserPen, UserRound } from 'lucide-react';
 import { api, ApiError, apiFile, setCsrf } from './api';
+import { CaptchaField, useCaptcha } from './captcha';
 import type { Account } from './types';
 
 export type AccountView = 'signin' | 'signup' | 'forgot' | 'reset' | 'verify' | 'profile' | 'change' | 'confirm-change' | 'keys' | 'regenerate' | 'new-keys' | 'recover' | 'export' | 'delete' | 'deleted';
 export type AccountLink = { kind: 'verify'; token: string } | { kind: 'reset'; uid: string; token: string };
 type RecoveryKey = { key: string; used: boolean };
-type Captcha = { captcha_id: string; image: string };
 // Forms protected by the self-hosted CAPTCHA. Every submission spends the challenge.
 const CAPTCHA_VIEWS: AccountView[] = ['signin', 'signup', 'forgot'];
 const CAPTCHA_PATHS = ['account/login/', 'account/signup/', 'account/password-reset/'];
@@ -85,8 +85,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
   const [newEmail, setNewEmail] = useState(''), [currentPassword, setCurrentPassword] = useState(''), [recoveryKey, setRecoveryKey] = useState('');
   const [keys, setKeys] = useState<RecoveryKey[]>([]), [keySet, setKeySet] = useState(''), [keysStored, setKeysStored] = useState(false), [understood, setUnderstood] = useState(false);
   const [pendingActivation, setPendingActivation] = useState(false), [pendingMessage, setPendingMessage] = useState(''), [resendToken, setResendToken] = useState('');
-  const [captcha, setCaptcha] = useState<Captcha | null>(null), [captchaAnswer, setCaptchaAnswer] = useState(''), [captchaError, setCaptchaError] = useState('');
-  const captchaRequest = useRef(0);
+  const captcha = useCaptcha(CAPTCHA_VIEWS.includes(view));
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [verifyState, setVerifyState] = useState<'pending' | 'done' | 'failed'>('pending');
   // A link may open in a fresh browser before the app's session bootstrap sets the CSRF cookie.
@@ -100,22 +99,12 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
     setNewEmail(''); setCurrentPassword(''); setRecoveryKey(''); setKeys([]); setKeySet(''); setKeysStored(false); setUnderstood(false);
   }
 
-  async function loadCaptcha(clearAnswer = false) {
-    const request = ++captchaRequest.current;
-    setCaptcha(null); setCaptchaError('');
-    if (clearAnswer) setCaptchaAnswer('');
-    try {
-      const next = await api<Captcha>('account/captcha/');
-      if (request === captchaRequest.current) setCaptcha(next);
-    } catch (e) { if (request === captchaRequest.current) setCaptchaError((e as Error).message); }
-  }
-
   async function submit(path: string, body: Record<string, unknown>, after: (result: AccountResponse) => void | Promise<void>, onError?: (e: ApiError) => boolean) {
     const protectedForm = CAPTCHA_PATHS.includes(path);
     setBusy(true); setError(''); setNotice('');
     try {
       await ready.current;
-      const result = await api<AccountResponse>(path, protectedForm ? { ...body, captcha_id: captcha?.captcha_id ?? '', captcha_answer: captchaAnswer } : body);
+      const result = await api<AccountResponse>(path, protectedForm ? { ...body, ...captcha.fields() } : body);
       setCsrf(result.csrf);
       await after(result);
     } catch (e) {
@@ -123,7 +112,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
     } finally {
       setBusy(false);
       // The server spent the challenge whatever the outcome: show a new image.
-      if (protectedForm) { setCaptcha(null); setCaptchaAnswer(''); }
+      if (protectedForm) captcha.spend();
     }
   }
 
@@ -139,11 +128,6 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
       })
       .catch(e => { setError((e as Error).message); setVerifyState('failed'); });
   }, []); // Mount only: a link is used once.
-
-  useEffect(() => {
-    // Each protected form needs an unspent challenge; opening the dialog always starts with a new one.
-    if (CAPTCHA_VIEWS.includes(view) && !captcha && !captchaError) void loadCaptcha();
-  }, [view, captcha, captchaError]);
 
   useEffect(() => {
     // The session may finish loading after the dialog opens.
@@ -219,14 +203,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
   const showToggle = (label = 'Show password') => <label className="check-label"><input type="checkbox" checked={showPassword} onChange={e => setShowPassword(e.target.checked)}/> {label}</label>;
   const passwordField = (label: string, autoComplete: 'current-password' | 'new-password', autoFocus = false) => <>{passwordInput(label, password, setPassword, autoComplete, { autoFocus })}{showToggle()}</>;
   const emailField = <label>Email<input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" autoFocus maxLength={254} required/></label>;
-  const captchaField = <div className="captcha">
-    <div className="captcha-image">
-      {captcha ? <img src={captcha.image} width={240} height={80} alt="CAPTCHA image: five distorted letters and numbers"/> : <span role={captchaError ? 'alert' : undefined}>{captchaError || 'Loading a new image…'}</span>}
-      <button type="button" className="captcha-refresh" aria-label="Show a new image" title="Show a new image" disabled={busy} onClick={() => void loadCaptcha(true)}><RefreshCw size={16}/></button>
-    </div>
-    <label>Characters in the image<input value={captchaAnswer} onChange={e => setCaptchaAnswer(e.target.value)} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={12} required/></label>
-    <p className="field-hint">Not case-sensitive. Can’t read it? Show a new image.</p>
-  </div>;
+  const captchaField = <CaptchaField captcha={captcha} busy={busy}/>;
   const feedback = <>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="form-note" role="status">{notice}</p>}</>;
   const action = (label: string, busyLabel: string, Icon: typeof LogIn, disabled = false) => <button className="button full" disabled={busy || disabled}>{busy ? <LoaderCircle className="spin" size={17}/> : <Icon size={17}/>} {busy ? busyLabel : label}</button>;
   const whatChanges = emailChange && passwordChange ? 'email and password' : emailChange ? 'email' : 'password';
@@ -241,7 +218,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
         {emailField}{passwordField('Password', 'current-password')}{captchaField}{feedback}
         {pendingActivation && <div className="account-warning" role="alert"><MailWarning size={20}/><p>{pendingMessage}</p></div>}
         {pendingActivation && <button type="button" className="button secondary full" disabled={busy} onClick={() => void resendActivation()}><Mail size={16}/> Send a new activation link</button>}
-        {action('Sign in', 'Signing in…', LogIn, !captcha)}
+        {action('Sign in', 'Signing in…', LogIn, !captcha.challenge)}
       </form>
       <div className="form-links">
         <button type="button" className="text-button" onClick={() => go('forgot')}>Forgot password?</button>
@@ -254,7 +231,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
       <p>Optional — you can keep playing as a guest. Your account will let RELAY save expedition results and squad settings in a future update. Signing up links this browser’s pilot to your email.</p>
       <form onSubmit={e => { e.preventDefault(); void signUp(); }}>
         {emailField}{passwordField('Password', 'new-password')}{captchaField}{feedback}
-        {action('Create account', 'Creating account…', UserRound, !captcha)}
+        {action('Create account', 'Creating account…', UserRound, !captcha.challenge)}
       </form>
       <div className="form-links"><button type="button" className="text-button" onClick={() => go('signin')}>Already have an account? Sign in <ArrowUpRight size={13}/></button></div>
     </>}
@@ -263,7 +240,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
       <p>Enter your account email and we’ll send a link to choose a new password. The link works once and expires in an hour.</p>
       <form onSubmit={e => { e.preventDefault(); void requestReset(); }}>
         {emailField}{captchaField}{feedback}
-        {action('Send reset link', 'Sending…', Mail, !captcha)}
+        {action('Send reset link', 'Sending…', Mail, !captcha.challenge)}
       </form>
       <div className="form-links"><button type="button" className="text-button" onClick={() => go('signin')}>Back to sign in <ArrowUpRight size={13}/></button></div>
     </>}
@@ -367,6 +344,7 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
         <li>Your pilots and their callsigns</li>
         <li>Squads you created or joined, with ORA’s replies in them</li>
         <li>The messages you wrote to ORA</li>
+        <li>Feedback you submitted, and the feedback you upvoted</li>
       </ul>
       <p>Your password and recovery keys aren’t included, and neither are other players’ callsigns or messages.</p>
       <form onSubmit={e => { e.preventDefault(); void exportData(); }}>
@@ -382,10 +360,11 @@ export function AccountPanel({ account, link, inSquad, onChanged, onDeleted, onC
       <p><strong>Erased:</strong></p>
       <ul className="account-list">
         <li>Your email address and password, and your recovery keys</li>
-        <li>Every callsign you flew, wherever it appears, including in squadmates’ messages</li>
+        <li>Every callsign you flew, wherever it appears in the game, including in squadmates’ messages</li>
         <li>Squad names you created and the messages you wrote to ORA</li>
+        <li>Your email address and callsigns in feedback you posted</li>
       </ul>
-      <p><strong>Kept, without anything that identifies you:</strong> scores, positions, mission events and other gameplay records, so RELAY can study how the game is played. You can create a new account with this email later; it won’t be connected to this one.</p>
+      <p><strong>Kept, without anything that identifies you:</strong> scores, positions, mission events and other gameplay records, plus the feedback you posted and your upvotes, so RELAY can study how the game is played and what players ask for. The rest of your feedback’s wording stays as you wrote it; staff remove personal details from posts when they review them. You can create a new account with this email later; it won’t be connected to this one.</p>
       <form onSubmit={e => { e.preventDefault(); void deleteAccount(); }}>
         {passwordInput('Current password', currentPassword, setCurrentPassword, 'current-password', { autoFocus: true })}
         {showToggle()}

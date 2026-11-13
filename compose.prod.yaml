@@ -52,6 +52,17 @@ services:
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:?}
       EMAIL_USE_SSL: ${EMAIL_USE_SSL:?}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:?}
+      # Player feedback: staff notified of new submissions, and abuse limits.
+      STAFF_EMAILS: ${STAFF_EMAILS:?}
+      FEEDBACK_SUBMISSIONS_PER_IP_HOUR: ${FEEDBACK_SUBMISSIONS_PER_IP_HOUR:?}
+      FEEDBACK_SUBMISSIONS_PER_SUBMITTER_DAY: ${FEEDBACK_SUBMISSIONS_PER_SUBMITTER_DAY:?}
+      FEEDBACK_VOTES_PER_IP_HOUR: ${FEEDBACK_VOTES_PER_IP_HOUR:?}
+      FEEDBACK_VOTER_CHECK_HOURS: ${FEEDBACK_VOTER_CHECK_HOURS:?}
+      FEEDBACK_SUBMISSION_COOLDOWN_SECONDS: ${FEEDBACK_SUBMISSION_COOLDOWN_SECONDS:?}
+      FEEDBACK_VOTES_PER_IDEA_PER_IP_DAY: ${FEEDBACK_VOTES_PER_IDEA_PER_IP_DAY:?}
+      FEEDBACK_MAX_LINKS: ${FEEDBACK_MAX_LINKS:?}
+      # May be empty: no blocked words.
+      FEEDBACK_BLOCKED_WORDS: ${FEEDBACK_BLOCKED_WORDS:-}
     volumes: ["music_media:/app/media", "backend_static:/app/staticfiles"]
     command: sh -c "python manage.py migrate --noinput && python manage.py import_songs && python manage.py collectstatic --noinput && uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips='*'"
     depends_on:

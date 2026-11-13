@@ -24,6 +24,7 @@ from game.views import csrf
 import redis
 
 from . import captcha
+from .captcha import require_captcha
 from .deletion import delete_account
 from .export import export_account, export_filename
 from .models import Account
@@ -121,16 +122,6 @@ def credentials_account(request, email, password):
     record_attempt(ip_key, LOGIN_WINDOW)
     record_attempt(email_attempts, LOGIN_WINDOW)
     raise ValidationError(BAD_LOGIN)
-
-
-def require_captcha(request):
-    """Check (and always consume) the CAPTCHA before any other work, including password hashing."""
-    answer = request.data.get('captcha_answer')
-    if not isinstance(answer, str) or not answer.strip():
-        captcha.check(request.data.get('captcha_id'), '')  # Still spend the challenge.
-        raise ValidationError('Type the characters shown in the image.')
-    if not captcha.check(request.data.get('captcha_id'), answer):
-        raise ValidationError('The characters did not match the image, or it expired. Try the new image.')
 
 
 @api_view(['GET'])

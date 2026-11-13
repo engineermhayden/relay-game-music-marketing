@@ -1,0 +1,8 @@
+{% autoescape off %}Your RELAY account for {{ email }} was deleted at your request, and you were signed out everywhere.
+
+We erased your email address, password, callsigns, the squad names you created and the messages you wrote to ORA. Gameplay records such as scores, positions and mission events are kept without anything that identifies you, to help us understand how RELAY is played.
+
+This is the last email we will send to this address; it is no longer stored. You can still play as a guest, or create a new account with this address at any time.
+
+If you did not delete your account, someone knew your password. Your account cannot be restored, but no personal data remains in it.
+{% endautoescape %}

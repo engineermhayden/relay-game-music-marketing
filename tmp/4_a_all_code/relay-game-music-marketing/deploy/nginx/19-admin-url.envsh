@@ -1,0 +1,10 @@
+#!/bin/sh
+# The official nginx entrypoint sources this before rendering its config template.
+DJANGO_ADMIN_PATH=$(printf '%s' "${DJANGO_ADMIN_URL-admin/}" | sed 's:^/*::; s:/*$::')
+case "$DJANGO_ADMIN_PATH" in
+    ''|*[!a-zA-Z0-9_/-]*|*//*|api|api/*|api-auth|api-auth/*|ws|ws/*|media|media/*|static|static/*|assets|assets/*|healthz|healthz/*)
+        echo 'DJANGO_ADMIN_URL must be a nonempty URL path using letters, numbers, hyphens, underscores and slashes, outside the API/static/media routes.' >&2
+        exit 1
+        ;;
+esac
+export DJANGO_ADMIN_PATH

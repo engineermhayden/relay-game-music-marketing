@@ -1,0 +1,13 @@
+.env
+.env.files
+.reference
+**/node_modules
+**/dist
+.git
+.venv
+artifacts
+**/__pycache__
+postgres_data
+redis_data
+backend/media
+backend/staticfiles
