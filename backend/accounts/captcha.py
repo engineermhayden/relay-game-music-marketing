@@ -1,4 +1,4 @@
-"""Self-hosted image CAPTCHA for sign-up, sign-in and password-reset requests.
+"""Self-hosted image CAPTCHA for sign-up, sign-in, password-reset and feedback requests.
 
 No third-party service: images are drawn with Pillow (already a dependency) and
 challenges live in the Django cache (Redis). Each challenge works once: any
@@ -17,6 +17,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils.crypto import constant_time_compare, salted_hmac
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from rest_framework.exceptions import ValidationError
 
 # No lookalikes: 0/O/Q and 1/I/L are left out. Answers ignore case and spaces.
 ALPHABET = 'ABCDEFGHJKMNPRSTUVWXYZ23456789'
@@ -63,6 +64,16 @@ def check(challenge_id, answer):
     if settings.ACCOUNT_CAPTCHA_TEST_MODE and normalize(answer) == TEST_ANSWER:
         return True
     return constant_time_compare(expected, _digest(challenge_id, answer))
+
+
+def require_captcha(request):
+    """Check (and always consume) the request's CAPTCHA before any other work, including password hashing."""
+    answer = request.data.get('captcha_answer')
+    if not isinstance(answer, str) or not answer.strip():
+        check(request.data.get('captcha_id'), '')  # Still spend the challenge.
+        raise ValidationError('Type the characters shown in the image.')
+    if not check(request.data.get('captcha_id'), answer):
+        raise ValidationError('The characters did not match the image, or it expired. Try the new image.')
 
 
 def _glyph(character, ink):

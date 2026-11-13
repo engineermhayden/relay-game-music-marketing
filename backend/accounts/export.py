@@ -1,11 +1,14 @@
 """Self-service data export: what RELAY stores about a signed-in player, as one JSON document.
 
 It covers the personal data that deletion erases (deletion.py): the account's email,
-its pilots and callsigns, the squads they flew in, the squads' ORA journal, and the
-player's own ORA prompts. Credentials are never included (no password hash, recovery
-keys, the secret they are derived from, or session data). Other players' callsigns and
-prompts are left out, because they are someone else's data.
+its pilots and callsigns, the squads they flew in, the squads' ORA journal, the
+player's own ORA prompts, and the feedback the player submitted and upvoted.
+Credentials are never included (no password hash, recovery keys, the secret they are
+derived from, or session data). Other players' callsigns and prompts are left out,
+because they are someone else's data.
 """
+import base64
+
 from django.db.models import Q
 from django.utils import timezone
 
@@ -17,6 +20,7 @@ NOTES = [
     'Times are UTC (ISO 8601). Positions are fictional world meters from the last saved state of each squad.',
     'Your password and recovery keys are credentials, so they are not included.',
     'Squad names and ORA replies appear as every squad member saw them. Other players\' callsigns and ORA prompts are not included.',
+    'Feedback lists what you submitted in every review status, with any screenshot (as a JPEG data URL) and Engine lab snapshot you attached. Ideas you upvoted show their title only while they are on the public board.',
 ]
 
 
@@ -49,6 +53,20 @@ def _position(point):
     return {'x': round(point.x, 2), 'z': round(point.y, 2)} if point else None
 
 
+def _feedback(account):
+    from feedback.models import Feedback, FeedbackVote
+    submitted = [{
+        'id': item.pk, 'category': item.category, 'title': item.title, 'details': item.body, 'status': item.status,
+        'team_reply': item.staff_response or None, 'created_at': _time(item.created_at), 'accepted_at': _time(item.published_at),
+        'screenshot': 'data:image/jpeg;base64,' + base64.b64encode(bytes(item.screenshot)).decode() if item.screenshot else None,
+        'engine_lab_snapshot': item.diagnostics,
+    } for item in Feedback.objects.filter(account=account).order_by('created_at', 'pk')]
+    upvoted = [{
+        'feedback_id': vote.feedback_id, 'title': vote.feedback.title if vote.feedback.is_public else None, 'voted_at': _time(vote.created_at),
+    } for vote in FeedbackVote.objects.filter(account=account).select_related('feedback').order_by('created_at', 'pk')]
+    return submitted, upvoted
+
+
 def export_account(account, now=None):
     from game.models import Membership, MissionEvent, Room  # game.views imports this app.
     now = now or timezone.now()
@@ -75,6 +93,7 @@ def export_account(account, now=None):
             prompts.append({'squad': squad, 'pilot_id': asker, 'callsign': data.get('pilot'), 'prompt': data.get('prompt'),
                             'ora_reply': entry.message, 'source': data.get('source'), 'created_at': _time(entry.created_at)})
 
+    feedback, feedback_votes = _feedback(account)
     return {
         'format': FORMAT, 'version': VERSION, 'exported_at': _time(now), 'notes': NOTES,
         'account': {
@@ -98,4 +117,6 @@ def export_account(account, now=None):
         } for room in rooms],
         'mission_events': mission_events,
         'ora_prompts': prompts,
+        'feedback': feedback,
+        'feedback_votes': feedback_votes,
     }

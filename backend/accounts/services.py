@@ -57,6 +57,8 @@ def sign_in(request, account):
     login(django_request, account.user)
     django_request.session[SESSION_EPOCH] = account.session_epoch
     link_session_pilot(request, account)
+    from feedback.services import link_session_feedback  # feedback imports this module.
+    link_session_feedback(request, account)
 
 
 def end_all_sessions(account):

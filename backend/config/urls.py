@@ -13,6 +13,7 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/music/', include(music_router.urls)),
     path('api/account/', include('accounts.urls')),
+    path('api/feedback/', include('feedback.urls')),
     path('api/health/', views.health),
     path('api/session/', views.session_view),
     path('api/rooms/', views.rooms),

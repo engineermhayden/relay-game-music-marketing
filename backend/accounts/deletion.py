@@ -8,6 +8,11 @@ person is replaced with random text or removed:
 - Every callsign the account flew, wherever it appears: pilot rows, room snapshots,
   live Redis room state, generated event text, ORA replies and other players' prompts.
 - Squad names the account created, and the ORA prompts it wrote.
+- In feedback the account submitted: its email addresses and callsigns, and the browser
+  user-agent string in attached Engine lab snapshots (a device fingerprint). The posts,
+  their screenshots (3D scene pixels only), the rest of each snapshot, their votes and the
+  account's own upvotes are kept for analysis. Any other personal details in a post's
+  wording are for staff to remove when reviewing it.
 """
 import logging
 import re
@@ -22,6 +27,7 @@ from .services import end_all_sessions
 
 logger = logging.getLogger(__name__)
 PROMPT_REMOVED = '[removed: user-self-deletion]'
+EMAIL_REMOVED = '[email removed]'
 
 
 def _garbage(length):
@@ -94,6 +100,27 @@ def _scrub_snapshots(rooms, scrubber):
         room.save(update_fields=['snapshot'])
 
 
+def _scrub_feedback(account, scrubber):
+    """Remove the account's email addresses, callsigns and user-agent strings from its feedback; keep everything else."""
+    from feedback.models import Feedback
+    # Longest first: when one address starts with the other (a .co corrected to .com), remove it whole.
+    addresses = [re.escape(address) for address in sorted({account.email, account.previous_email} - {''}, key=len, reverse=True)]
+    emails = re.compile('|'.join(addresses), re.IGNORECASE) if addresses else None
+    fields = ['title', 'body', 'staff_response']
+    items = list(Feedback.objects.select_for_update().defer('screenshot').filter(account=account))
+    for item in items:
+        for field in fields:
+            value = getattr(item, field)
+            if emails is not None:
+                value = emails.sub(EMAIL_REMOVED, value)
+            # A random callsign can be longer than the one it replaces, so keep to the column size.
+            setattr(item, field, scrubber.text(value)[:Feedback._meta.get_field(field).max_length])
+        browser = (item.diagnostics or {}).get('browser')
+        if isinstance(browser, dict) and 'user_agent' in browser:
+            browser['user_agent'] = PROMPT_REMOVED
+    Feedback.objects.bulk_update(items, [*fields, 'diagnostics'])
+
+
 def delete_account(account):
     """Soft-delete an account for its owner. Raises (changing nothing) if live game state is unreachable."""
     from game.models import MissionEvent, Pilot, Room
@@ -129,6 +156,8 @@ def delete_account(account):
                 data.update({key: scrubber.text(data[key]) for key in ('pilot', 'prompt') if key in data})
             entry.data = data
         MissionEvent.objects.bulk_update(events, ['message', 'data'])
+        # Before the email is replaced below: it is one of the things removed from the text.
+        _scrub_feedback(account, scrubber)
 
         user = account.user
         garbage_email = f'{_garbage(64)}@deleted.invalid'  # RFC 2606: .invalid can never receive mail.
