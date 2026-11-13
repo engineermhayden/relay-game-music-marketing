@@ -1,6 +1,0 @@
-{% autoescape off %}The email for your RELAY account was changed from {{ old }} to {{ new }}. You were signed out everywhere.
-
-If you made this change, confirm the new address from the email we sent there. No other action is needed.
-
-If you did not make this change, open {{ site }} and choose Sign in > Use a recovery key. Enter this address ({{ old }}) and one of your recovery keys. Until the new address is confirmed, recovery also restores this address to your account.
-{% endautoescape %}
